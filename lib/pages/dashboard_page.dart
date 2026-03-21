@@ -1,5 +1,5 @@
 import 'dart:math';
-import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -505,7 +505,7 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(children: [
-                Icon(PhosphorIcons.blinds(PhosphorIconsStyle.light), color: isOpen ? SmithMkColors.blindOpen : SmithMkColors.textTertiary, size: 20),
+                Icon(PhosphorIcons.slidersHorizontal(PhosphorIconsStyle.light), color: isOpen ? SmithMkColors.blindOpen : SmithMkColors.textTertiary, size: 20),
                 const SizedBox(width: 10),
                 const Text('Living Room', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
               ]),

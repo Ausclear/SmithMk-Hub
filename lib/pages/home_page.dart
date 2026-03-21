@@ -46,7 +46,7 @@ class _HomePageState extends State<HomePage> {
         isActive: true, activeColor: SmithMkColors.heatingActive,
       ),
       TileData(
-        id: 'blinds', icon: PhosphorIcons.blinds(PhosphorIconsStyle.light),
+        id: 'blinds', icon: PhosphorIcons.slidersHorizontal(PhosphorIconsStyle.light),
         label: 'Blinds', value: '2 open',
         isActive: true, activeColor: SmithMkColors.blindOpen,
       ),
@@ -58,7 +58,7 @@ class _HomePageState extends State<HomePage> {
       TileData(
         id: 'energy', icon: PhosphorIcons.lightning(PhosphorIconsStyle.light),
         label: 'Energy', value: '3.2kW Solar',
-        isActive: true, activeColor: SmithMkColors.accentWarm,
+        isActive: true, activeColor: SmithMkColors.gold,
       ),
     ];
   }
@@ -130,7 +130,7 @@ class _HomePageState extends State<HomePage> {
             Text(
               'SmithMk',
               style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                    color: SmithMkColors.accentWarm,
+                    color: SmithMkColors.gold,
                     fontWeight: FontWeight.w300,
                     letterSpacing: 1,
                   ),
@@ -151,7 +151,7 @@ class _HomePageState extends State<HomePage> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(PhosphorIcons.thermometerSimple(PhosphorIconsStyle.light), color: SmithMkColors.accentWarm, size: 20),
+              Icon(PhosphorIcons.thermometerSimple(PhosphorIconsStyle.light), color: SmithMkColors.gold, size: 20),
               const SizedBox(width: 8),
               Text(
                 '22.4°',
@@ -179,7 +179,7 @@ class _HomePageState extends State<HomePage> {
           _buildStatusDivider(),
           _buildStatusItem(PhosphorIcons.lightbulb(PhosphorIconsStyle.light), '4 On', SmithMkColors.lightOn),
           _buildStatusDivider(),
-          _buildStatusItem(PhosphorIcons.sunDim(PhosphorIconsStyle.light), '3.2kW', SmithMkColors.accentWarm),
+          _buildStatusItem(PhosphorIcons.sunDim(PhosphorIconsStyle.light), '3.2kW', SmithMkColors.gold),
         ],
       ),
     );
@@ -206,7 +206,7 @@ class _HomePageState extends State<HomePage> {
       physics: const BouncingScrollPhysics(),
       child: Row(
         children: [
-          SceneCard(icon: PhosphorIcons.sun(PhosphorIconsStyle.light), label: 'Morning', color: SmithMkColors.accentWarm, onTap: () {}),
+          SceneCard(icon: PhosphorIcons.sun(PhosphorIconsStyle.light), label: 'Morning', color: SmithMkColors.gold, onTap: () {}),
           SceneCard(icon: PhosphorIcons.filmSlate(PhosphorIconsStyle.light), label: 'Movie', color: SmithMkColors.accentPurple, onTap: () {}),
           SceneCard(icon: PhosphorIcons.moonStars(PhosphorIconsStyle.light), label: 'Good Night', color: SmithMkColors.accentPrimary, onTap: () {}),
           SceneCard(icon: PhosphorIcons.signOut(PhosphorIconsStyle.light), label: 'Away', color: SmithMkColors.error, onTap: () {}),

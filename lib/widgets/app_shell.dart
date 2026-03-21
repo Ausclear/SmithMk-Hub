@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../theme/smithmk_theme.dart';
-import '../pages/home_page.dart';
+
 import '../pages/dashboard_page.dart';
 import '../pages/placeholder_page.dart';
 

@@ -42,7 +42,7 @@ class _ReorderableTileGridState extends State<ReorderableTileGrid> {
   Offset _dragOffset = Offset.zero;
   late List<TileData> _tiles;
   final List<GlobalKey> _keys = [];
-  final Map<int, Offset> _tilePositions = {};
+
   int _lastHapticIndex = -1;
 
   @override
