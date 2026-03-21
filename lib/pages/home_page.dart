@@ -17,13 +17,13 @@ class _HomePageState extends State<HomePage> {
   int? _selectedTile;
 
   final List<_HomeTile> _tiles = [
-    _HomeTile('Dashboard', PhosphorIcons.chartBar(PhosphorIconsStyle.duotone), SmithMkColors.accentPrimary),
-    _HomeTile('Lights', PhosphorIcons.lightbulb(PhosphorIconsStyle.duotone), SmithMkColors.accentPrimary),
+    _HomeTile('Dashboard', PhosphorIcons.chartBar(PhosphorIconsStyle.duotone), SmithMkColors.accent),
+    _HomeTile('Lights', PhosphorIcons.lightbulb(PhosphorIconsStyle.duotone), SmithMkColors.accent),
     _HomeTile('Security', PhosphorIcons.shieldCheck(PhosphorIconsStyle.duotone), SmithMkColors.error),
-    _HomeTile('Climate', PhosphorIcons.thermometerSimple(PhosphorIconsStyle.duotone), SmithMkColors.heatingActive),
-    _HomeTile('Blinds', PhosphorIcons.slidersHorizontal(PhosphorIconsStyle.duotone), SmithMkColors.accentPrimary),
-    _HomeTile('Energy', PhosphorIcons.lightning(PhosphorIconsStyle.duotone), SmithMkColors.accentPrimary),
-    _HomeTile('Media', PhosphorIcons.speakerHigh(PhosphorIconsStyle.duotone), SmithMkColors.accentPrimary),
+    _HomeTile('Climate', PhosphorIcons.thermometerSimple(PhosphorIconsStyle.duotone), SmithMkColors.heatingMode),
+    _HomeTile('Blinds', PhosphorIcons.slidersHorizontal(PhosphorIconsStyle.duotone), SmithMkColors.accent),
+    _HomeTile('Energy', PhosphorIcons.lightning(PhosphorIconsStyle.duotone), SmithMkColors.accent),
+    _HomeTile('Media', PhosphorIcons.speakerHigh(PhosphorIconsStyle.duotone), SmithMkColors.accent),
     _HomeTile('Rooms', PhosphorIcons.door(PhosphorIconsStyle.duotone), SmithMkColors.gold),
     _HomeTile('Settings', PhosphorIcons.gear(PhosphorIconsStyle.duotone), SmithMkColors.textSecondary),
   ];

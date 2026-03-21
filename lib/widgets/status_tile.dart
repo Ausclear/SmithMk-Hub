@@ -16,7 +16,7 @@ class StatusTile extends StatefulWidget {
     required this.icon,
     required this.label,
     required this.value,
-    this.activeColor = SmithMkColors.accentPrimary,
+    this.activeColor = SmithMkColors.accent,
     this.isActive = false,
     this.onTap,
   });

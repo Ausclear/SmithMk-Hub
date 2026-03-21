@@ -96,7 +96,7 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
             animation: _sceneFlashController,
             builder: (ctx, _) => IgnorePointer(
               child: Container(
-                color: SmithMkColors.accentPrimary.withValues(
+                color: SmithMkColors.accent.withValues(
                   alpha: _sceneFlashController.value * 0.06 * (1 - _sceneFlashController.value) * 4,
                 ),
               ),
@@ -198,11 +198,11 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
         children: [
           _statusItem(PhosphorIcons.shieldCheck(PhosphorIconsStyle.light), _securityArmed ? 'Armed' : 'Off', _securityArmed ? SmithMkColors.success : SmithMkColors.error),
           _divider(),
-          _statusItem(PhosphorIcons.lockSimple(PhosphorIconsStyle.light), _frontDoorLocked ? 'Locked' : 'Open', _frontDoorLocked ? SmithMkColors.success : SmithMkColors.accentPrimary),
+          _statusItem(PhosphorIcons.lockSimple(PhosphorIconsStyle.light), _frontDoorLocked ? 'Locked' : 'Open', _frontDoorLocked ? SmithMkColors.success : SmithMkColors.accent),
           _divider(),
-          _statusItem(PhosphorIcons.lightbulb(PhosphorIconsStyle.light), '${_activeLightCount} On', _activeLightCount > 0 ? SmithMkColors.accentPrimary : SmithMkColors.textTertiary),
+          _statusItem(PhosphorIcons.lightbulb(PhosphorIconsStyle.light), '${_activeLightCount} On', _activeLightCount > 0 ? SmithMkColors.accent : SmithMkColors.textTertiary),
           _divider(),
-          _statusItem(PhosphorIcons.sunDim(PhosphorIconsStyle.light), '${_solarKw}kW', SmithMkColors.accentPrimary),
+          _statusItem(PhosphorIcons.sunDim(PhosphorIconsStyle.light), '${_solarKw}kW', SmithMkColors.accent),
         ],
       ),
     );
@@ -247,20 +247,20 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
         margin: const EdgeInsets.only(right: 10),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: active ? SmithMkColors.accentPrimary.withValues(alpha: 0.1) : SmithMkColors.cardSurface,
+          color: active ? SmithMkColors.accent.withValues(alpha: 0.1) : SmithMkColors.cardSurface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: active ? SmithMkColors.accentPrimary.withValues(alpha: 0.4) : SmithMkColors.glassBorder,
+            color: active ? SmithMkColors.accent.withValues(alpha: 0.4) : SmithMkColors.glassBorder,
             width: active ? 1.5 : 1,
           ),
-          boxShadow: active ? [BoxShadow(color: SmithMkColors.accentPrimary.withValues(alpha: 0.15), blurRadius: 12)] : null,
+          boxShadow: active ? [BoxShadow(color: SmithMkColors.accent.withValues(alpha: 0.15), blurRadius: 12)] : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: active ? SmithMkColors.accentPrimary : SmithMkColors.textSecondary),
+            Icon(icon, size: 16, color: active ? SmithMkColors.accent : SmithMkColors.textSecondary),
             const SizedBox(width: 8),
-            Text(name, style: TextStyle(fontSize: 12, fontWeight: active ? FontWeight.w600 : FontWeight.w400, color: active ? SmithMkColors.accentPrimary : SmithMkColors.textSecondary)),
+            Text(name, style: TextStyle(fontSize: 12, fontWeight: active ? FontWeight.w600 : FontWeight.w400, color: active ? SmithMkColors.accent : SmithMkColors.textSecondary)),
           ],
         ),
       ),
@@ -277,7 +277,7 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
 
     return GlassCard(
       padding: const EdgeInsets.all(20),
-      glowColor: _heatingOn ? SmithMkColors.heatingActive : null,
+      glowColor: _heatingOn ? SmithMkColors.heatingMode : null,
       child: Column(
         children: [
           SizedBox(
@@ -423,7 +423,7 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                         _heatingOn ? 'HEATING' : 'OFF',
                         style: TextStyle(
                           fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 2,
-                          color: _heatingOn ? SmithMkColors.heatingActive : SmithMkColors.textTertiary,
+                          color: _heatingOn ? SmithMkColors.heatingMode : SmithMkColors.textTertiary,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -449,12 +449,12 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                   duration: const Duration(milliseconds: 300),
                   width: 52, height: 52,
                   decoration: BoxDecoration(
-                    color: _heatingOn ? SmithMkColors.heatingActive.withValues(alpha: 0.15) : SmithMkColors.cardSurface,
+                    color: _heatingOn ? SmithMkColors.heatingMode.withValues(alpha: 0.15) : SmithMkColors.cardSurface,
                     shape: BoxShape.circle,
-                    border: Border.all(color: _heatingOn ? SmithMkColors.heatingActive.withValues(alpha: 0.4) : SmithMkColors.glassBorder),
+                    border: Border.all(color: _heatingOn ? SmithMkColors.heatingMode.withValues(alpha: 0.4) : SmithMkColors.glassBorder),
                     boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 8, offset: const Offset(0, 3))],
                   ),
-                  child: Icon(PhosphorIcons.power(PhosphorIconsStyle.bold), color: _heatingOn ? SmithMkColors.heatingActive : SmithMkColors.textTertiary, size: 22),
+                  child: Icon(PhosphorIcons.power(PhosphorIconsStyle.bold), color: _heatingOn ? SmithMkColors.heatingMode : SmithMkColors.textTertiary, size: 22),
                 ),
               ),
               const SizedBox(width: 36),
@@ -494,16 +494,16 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
     final on = value > 0;
     return GlassCard(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      glowColor: on ? SmithMkColors.accentPrimary : null,
+      glowColor: on ? SmithMkColors.accent : null,
       child: Row(
         children: [
           Container(
             width: 38, height: 38,
             decoration: BoxDecoration(
-              color: (on ? SmithMkColors.accentPrimary : SmithMkColors.textTertiary).withValues(alpha: 0.12),
+              color: (on ? SmithMkColors.accent : SmithMkColors.textTertiary).withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: on ? SmithMkColors.accentPrimary : SmithMkColors.textTertiary, size: 18),
+            child: Icon(icon, color: on ? SmithMkColors.accent : SmithMkColors.textTertiary, size: 18),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -514,18 +514,18 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(name, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: on ? SmithMkColors.textPrimary : SmithMkColors.textSecondary)),
-                    Text('${(value * 100).round()}%', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: on ? SmithMkColors.accentPrimary : SmithMkColors.textTertiary)),
+                    Text('${(value * 100).round()}%', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: on ? SmithMkColors.accent : SmithMkColors.textTertiary)),
                   ],
                 ),
                 const SizedBox(height: 8),
                 SliderTheme(
                   data: SliderThemeData(
                     trackHeight: 4,
-                    activeTrackColor: SmithMkColors.accentPrimary,
+                    activeTrackColor: SmithMkColors.accent,
                     inactiveTrackColor: SmithMkColors.glassBorder,
-                    thumbColor: SmithMkColors.accentPrimary,
+                    thumbColor: SmithMkColors.accent,
                     thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
-                    overlayColor: SmithMkColors.accentPrimary.withValues(alpha: 0.1),
+                    overlayColor: SmithMkColors.accent.withValues(alpha: 0.1),
                     overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
                   ),
                   child: Slider(
@@ -551,18 +551,18 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
     final isOpen = _blindPosition > 0;
     return GlassCard(
       padding: const EdgeInsets.all(18),
-      glowColor: isOpen ? SmithMkColors.accentPrimary : null,
+      glowColor: isOpen ? SmithMkColors.accent : null,
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(children: [
-                Icon(PhosphorIcons.slidersHorizontal(PhosphorIconsStyle.light), color: isOpen ? SmithMkColors.accentPrimary : SmithMkColors.textTertiary, size: 20),
+                Icon(PhosphorIcons.slidersHorizontal(PhosphorIconsStyle.light), color: isOpen ? SmithMkColors.accent : SmithMkColors.textTertiary, size: 20),
                 const SizedBox(width: 10),
                 const Text('Living Room', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
               ]),
-              Text('${(_blindPosition * 100).round()}%', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isOpen ? SmithMkColors.accentPrimary : SmithMkColors.textTertiary)),
+              Text('${(_blindPosition * 100).round()}%', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isOpen ? SmithMkColors.accent : SmithMkColors.textTertiary)),
             ],
           ),
           const SizedBox(height: 14),
@@ -580,11 +580,11 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                     SliderTheme(
                       data: SliderThemeData(
                         trackHeight: 4,
-                        activeTrackColor: SmithMkColors.accentPrimary,
+                        activeTrackColor: SmithMkColors.accent,
                         inactiveTrackColor: SmithMkColors.glassBorder,
-                        thumbColor: SmithMkColors.accentPrimary,
+                        thumbColor: SmithMkColors.accent,
                         thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
-                        overlayColor: SmithMkColors.accentPrimary.withValues(alpha: 0.1),
+                        overlayColor: SmithMkColors.accent.withValues(alpha: 0.1),
                       ),
                       child: Slider(
                         value: _blindPosition,
@@ -677,7 +677,7 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
   }
 
   Widget _lockTile(String name, bool locked, VoidCallback onTap) {
-    final c = locked ? SmithMkColors.success : SmithMkColors.accentPrimary;
+    final c = locked ? SmithMkColors.success : SmithMkColors.accent;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -711,17 +711,17 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
     final net = (_solarKw - _homeKw).abs().toStringAsFixed(1);
     return GlassCard(
       padding: const EdgeInsets.all(20),
-      glowColor: SmithMkColors.accentPrimary,
+      glowColor: SmithMkColors.accent,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _energyNode(PhosphorIcons.sunDim(PhosphorIconsStyle.light), 'Solar', '${_solarKw}kW', SmithMkColors.accentPrimary),
+          _energyNode(PhosphorIcons.sunDim(PhosphorIconsStyle.light), 'Solar', '${_solarKw}kW', SmithMkColors.accent),
           Column(
             children: [
               Icon(exporting ? PhosphorIcons.arrowRight(PhosphorIconsStyle.bold) : PhosphorIcons.arrowLeft(PhosphorIconsStyle.bold), color: SmithMkColors.textTertiary, size: 18),
               const SizedBox(height: 4),
               Text(exporting ? 'Exporting' : 'Importing', style: const TextStyle(fontSize: 9, color: SmithMkColors.textTertiary)),
-              Text('${net}kW', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: exporting ? SmithMkColors.success : SmithMkColors.accentPrimary)),
+              Text('${net}kW', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: exporting ? SmithMkColors.success : SmithMkColors.accent)),
             ],
           ),
           _energyNode(PhosphorIcons.house(PhosphorIconsStyle.light), 'Home', '${_homeKw}kW', SmithMkColors.gold),

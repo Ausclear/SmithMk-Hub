@@ -12,7 +12,7 @@ class SceneCard extends StatefulWidget {
     super.key,
     required this.icon,
     required this.label,
-    this.color = SmithMkColors.accentPrimary,
+    this.color = SmithMkColors.accent,
     this.onTap,
   });
 

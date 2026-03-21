@@ -15,7 +15,7 @@ class TileData {
     required this.icon,
     required this.label,
     required this.value,
-    this.activeColor = SmithMkColors.accentPrimary,
+    this.activeColor = SmithMkColors.accent,
     this.isActive = false,
   });
 }
@@ -179,12 +179,12 @@ class _ReorderableTileGridState extends State<ReorderableTileGrid> {
         curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
           color: isHoverTarget
-              ? SmithMkColors.accentPrimary.withValues(alpha: 0.08)
-              : SmithMkColors.glassOverlay,
+              ? SmithMkColors.accent.withValues(alpha: 0.08)
+              : Color(0x0DFFFFFF),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isHoverTarget
-                ? SmithMkColors.accentPrimary.withValues(alpha: 0.3)
+                ? SmithMkColors.accent.withValues(alpha: 0.3)
                 : SmithMkColors.glassBorder,
             width: isHoverTarget ? 1.5 : 1.0,
           ),
@@ -199,15 +199,15 @@ class _ReorderableTileGridState extends State<ReorderableTileGrid> {
     final tile = _tiles[index];
     return Container(
       decoration: BoxDecoration(
-        color: SmithMkColors.elevatedSurface,
+        color: SmithMkColors.cardSurfaceAlt,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: SmithMkColors.accentPrimary.withValues(alpha: 0.4),
+          color: SmithMkColors.accent.withValues(alpha: 0.4),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: SmithMkColors.accentPrimary.withValues(alpha: 0.15),
+            color: SmithMkColors.accent.withValues(alpha: 0.15),
             blurRadius: 24,
             spreadRadius: -4,
           ),

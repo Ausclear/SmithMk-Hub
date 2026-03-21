@@ -41,31 +41,31 @@ class _AppShellState extends State<AppShell> {
             HapticFeedback.selectionClick();
             setState(() => _currentIndex = index);
           },
-          indicatorColor: SmithMkColors.accentPrimary.withValues(alpha: 0.12),
+          indicatorColor: SmithMkColors.accent.withValues(alpha: 0.12),
           destinations: [
             NavigationDestination(
               icon: Icon(PhosphorIcons.house(PhosphorIconsStyle.light), color: SmithMkColors.textTertiary, size: 24),
-              selectedIcon: Icon(PhosphorIcons.house(PhosphorIconsStyle.fill), color: SmithMkColors.accentPrimary, size: 24),
+              selectedIcon: Icon(PhosphorIcons.house(PhosphorIconsStyle.fill), color: SmithMkColors.accent, size: 24),
               label: 'Home',
             ),
             NavigationDestination(
               icon: Icon(PhosphorIcons.squaresFour(PhosphorIconsStyle.light), color: SmithMkColors.textTertiary, size: 24),
-              selectedIcon: Icon(PhosphorIcons.squaresFour(PhosphorIconsStyle.fill), color: SmithMkColors.accentPrimary, size: 24),
+              selectedIcon: Icon(PhosphorIcons.squaresFour(PhosphorIconsStyle.fill), color: SmithMkColors.accent, size: 24),
               label: 'Dashboard',
             ),
             NavigationDestination(
               icon: Icon(PhosphorIcons.lightbulb(PhosphorIconsStyle.light), color: SmithMkColors.textTertiary, size: 24),
-              selectedIcon: Icon(PhosphorIcons.lightbulb(PhosphorIconsStyle.fill), color: SmithMkColors.accentPrimary, size: 24),
+              selectedIcon: Icon(PhosphorIcons.lightbulb(PhosphorIconsStyle.fill), color: SmithMkColors.accent, size: 24),
               label: 'Lights',
             ),
             NavigationDestination(
               icon: Icon(PhosphorIcons.musicNotes(PhosphorIconsStyle.light), color: SmithMkColors.textTertiary, size: 24),
-              selectedIcon: Icon(PhosphorIcons.musicNotes(PhosphorIconsStyle.fill), color: SmithMkColors.accentPrimary, size: 24),
+              selectedIcon: Icon(PhosphorIcons.musicNotes(PhosphorIconsStyle.fill), color: SmithMkColors.accent, size: 24),
               label: 'Media',
             ),
             NavigationDestination(
               icon: Icon(PhosphorIcons.gear(PhosphorIconsStyle.light), color: SmithMkColors.textTertiary, size: 24),
-              selectedIcon: Icon(PhosphorIcons.gear(PhosphorIconsStyle.fill), color: SmithMkColors.accentPrimary, size: 24),
+              selectedIcon: Icon(PhosphorIcons.gear(PhosphorIconsStyle.fill), color: SmithMkColors.accent, size: 24),
               label: 'Settings',
             ),
           ],
