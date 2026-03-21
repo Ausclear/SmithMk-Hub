@@ -287,7 +287,7 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                   width: 240, height: 240,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFF1C1C26),
+                    color: const Color(0xFF151515),
                     boxShadow: [
                       // Heavy drop shadow
                       BoxShadow(color: Colors.black.withValues(alpha: 0.7), blurRadius: 30, offset: const Offset(0, 10), spreadRadius: -5),
@@ -304,7 +304,7 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                     gradient: const LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [Color(0xFF2A2A38), Color(0xFF101018)],
+                      colors: [Color(0xFF222222), Color(0xFF0C0C0C)],
                     ),
                   ),
                 ),
@@ -313,7 +313,7 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                   width: 224, height: 224,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFF141420),
+                    color: const Color(0xFF101010),
                     border: Border.all(color: Colors.white.withValues(alpha: 0.04), width: 0.5),
                   ),
                 ),

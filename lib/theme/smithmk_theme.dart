@@ -3,10 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class SmithMkColors {
-  // Backgrounds - NO BLUE/NAVY
-  static const Color background = Color(0xFF080E1C);     // rgba(8,14,28,1)
-  static const Color cardSurface = Color(0xFF16161F);     // #16161F dark near-black
-  static const Color elevatedSurface = Color(0xFF1E1E28);
+  // Backgrounds - NEAR BLACK, NO BLUE WHATSOEVER
+  static const Color background = Color(0xFF0A0A0A);      // #0a0a0a - near black
+  static const Color cardSurface = Color(0xFF111111);      // #111111 - card surface
+  static const Color elevatedSurface = Color(0xFF1A1A1A);  // elevated
   static const Color glassOverlay = Color(0x0DFFFFFF);
   static const Color glassBorder = Color(0x14FFFFFF);
 
@@ -16,9 +16,9 @@ class SmithMkColors {
   static const Color textTertiary = Color(0xFF55556A);
 
   // Accents - AMBER/GOLD ONLY
-  static const Color accentPrimary = Color(0xFFFFC107);   // Amber - active states
-  static const Color gold = Color(0xFFC4A96B);            // Gold - labels/text
-  static const Color accentPurple = Color(0xFF9C27B0);    // Blinds open only
+  static const Color accentPrimary = Color(0xFFFFC107);
+  static const Color gold = Color(0xFFC4A96B);
+  static const Color accentPurple = Color(0xFF9C27B0);
 
   // Semantic
   static const Color success = Color(0xFF4ADE80);
