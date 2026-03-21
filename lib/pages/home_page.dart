@@ -21,7 +21,7 @@ class _HomePageState extends State<HomePage> {
     _HomeTile('Lights', PhosphorIcons.lightbulb(PhosphorIconsStyle.duotone), SmithMkColors.accentPrimary),
     _HomeTile('Security', PhosphorIcons.shieldCheck(PhosphorIconsStyle.duotone), SmithMkColors.error),
     _HomeTile('Climate', PhosphorIcons.thermometerSimple(PhosphorIconsStyle.duotone), SmithMkColors.heatingActive),
-    _HomeTile('Blinds', PhosphorIcons.slidersHorizontal(PhosphorIconsStyle.duotone), SmithMkColors.blindOpen),
+    _HomeTile('Blinds', PhosphorIcons.slidersHorizontal(PhosphorIconsStyle.duotone), SmithMkColors.accentPrimary),
     _HomeTile('Energy', PhosphorIcons.lightning(PhosphorIconsStyle.duotone), SmithMkColors.accentPrimary),
     _HomeTile('Media', PhosphorIcons.speakerHigh(PhosphorIconsStyle.duotone), SmithMkColors.accentPrimary),
     _HomeTile('Rooms', PhosphorIcons.door(PhosphorIconsStyle.duotone), SmithMkColors.gold),

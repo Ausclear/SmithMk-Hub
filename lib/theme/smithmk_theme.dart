@@ -3,10 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class SmithMkColors {
-  // Backgrounds - NEAR BLACK, NO BLUE WHATSOEVER
-  static const Color background = Color(0xFF0A0A0A);      // #0a0a0a - near black
-  static const Color cardSurface = Color(0xFF111111);      // #111111 - card surface
-  static const Color elevatedSurface = Color(0xFF1A1A1A);  // elevated
+  // Backgrounds - NEAR BLACK, NO BLUE
+  static const Color background = Color(0xFF0A0A0A);
+  static const Color cardSurface = Color(0xFF111111);
+  static const Color elevatedSurface = Color(0xFF1A1A1A);
   static const Color glassOverlay = Color(0x0DFFFFFF);
   static const Color glassBorder = Color(0x14FFFFFF);
 
@@ -15,23 +15,14 @@ class SmithMkColors {
   static const Color textSecondary = Color(0xFF8B8B9E);
   static const Color textTertiary = Color(0xFF55556A);
 
-  // Accents - AMBER/GOLD ONLY
-  static const Color accentPrimary = Color(0xFFFFC107);
-  static const Color gold = Color(0xFFC4A96B);
-  static const Color accentPurple = Color(0xFF9C27B0);
+  // Accents - AMBER AND GOLD ONLY
+  static const Color accentPrimary = Color(0xFFFFC107);   // Amber - active/on states
+  static const Color gold = Color(0xFFC4A96B);            // Gold - labels, branding
 
-  // Semantic
-  static const Color success = Color(0xFF4ADE80);
-  static const Color warning = Color(0xFFFBBF24);
-  static const Color error = Color(0xFFF87171);
-
-  // Device states
-  static const Color lightOn = Color(0xFFFFC107);
-  static const Color lightOff = Color(0xFF55556A);
-  static const Color heatingActive = Color(0xFFFF6B35);
-  static const Color coolingActive = Color(0xFF48CAE4);
-  static const Color securityArmed = Color(0xFF4ADE80);
-  static const Color blindOpen = Color(0xFF9C27B0);
+  // Status indicators only (not accents)
+  static const Color success = Color(0xFF4ADE80);         // Connected/armed status dots
+  static const Color error = Color(0xFFF87171);           // Disconnected/alert status dots
+  static const Color heatingActive = Color(0xFFFF6B35);   // Heating mode only
 }
 
 class SmithMkTheme {

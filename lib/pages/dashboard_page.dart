@@ -497,18 +497,18 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
     final isOpen = _blindPosition > 0;
     return GlassCard(
       padding: const EdgeInsets.all(18),
-      glowColor: isOpen ? SmithMkColors.blindOpen : null,
+      glowColor: isOpen ? SmithMkColors.accentPrimary : null,
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(children: [
-                Icon(PhosphorIcons.slidersHorizontal(PhosphorIconsStyle.light), color: isOpen ? SmithMkColors.blindOpen : SmithMkColors.textTertiary, size: 20),
+                Icon(PhosphorIcons.slidersHorizontal(PhosphorIconsStyle.light), color: isOpen ? SmithMkColors.accentPrimary : SmithMkColors.textTertiary, size: 20),
                 const SizedBox(width: 10),
                 const Text('Living Room', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
               ]),
-              Text('${(_blindPosition * 100).round()}%', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isOpen ? SmithMkColors.blindOpen : SmithMkColors.textTertiary)),
+              Text('${(_blindPosition * 100).round()}%', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isOpen ? SmithMkColors.accentPrimary : SmithMkColors.textTertiary)),
             ],
           ),
           const SizedBox(height: 14),
@@ -526,11 +526,11 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                     SliderTheme(
                       data: SliderThemeData(
                         trackHeight: 4,
-                        activeTrackColor: SmithMkColors.blindOpen,
+                        activeTrackColor: SmithMkColors.accentPrimary,
                         inactiveTrackColor: SmithMkColors.glassBorder,
-                        thumbColor: SmithMkColors.blindOpen,
+                        thumbColor: SmithMkColors.accentPrimary,
                         thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
-                        overlayColor: SmithMkColors.blindOpen.withValues(alpha: 0.1),
+                        overlayColor: SmithMkColors.accentPrimary.withValues(alpha: 0.1),
                       ),
                       child: Slider(
                         value: _blindPosition,
