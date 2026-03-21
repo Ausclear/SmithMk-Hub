@@ -28,17 +28,12 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
   double _solarKw = 3.2;
   double _homeKw = 1.8;
 
-  late AnimationController _shimmerController;
   late AnimationController _pulseController;
   late AnimationController _sceneFlashController;
 
   @override
   void initState() {
     super.initState();
-    _shimmerController = AnimationController(
-      duration: const Duration(milliseconds: 4000),
-      vsync: this,
-    )..repeat();
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 2000),
       vsync: this,
@@ -51,7 +46,6 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
 
   @override
   void dispose() {
-    _shimmerController.dispose();
     _pulseController.dispose();
     _sceneFlashController.dispose();
     super.dispose();
@@ -283,121 +277,68 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
       glowColor: _heatingOn ? SmithMkColors.heatingActive : null,
       child: Column(
         children: [
-          // 3D Glass thermostat ring
           SizedBox(
-            width: 230, height: 230,
+            width: 240, height: 240,
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // Outer shadow ring — depth behind the glass
+                // Outer ring — sharp bevelled edge with drop shadow
                 Container(
-                  width: 230, height: 230,
+                  width: 240, height: 240,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
+                    color: const Color(0xFF1C1C26),
                     boxShadow: [
-                      // Deep shadow below
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 40, offset: const Offset(0, 12), spreadRadius: -8),
-                      // Subtle ambient
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 20, spreadRadius: -4),
+                      // Heavy drop shadow
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.7), blurRadius: 30, offset: const Offset(0, 10), spreadRadius: -5),
+                      // Ambient shadow
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 15, spreadRadius: -2),
                     ],
                   ),
                 ),
-                // Outer bevel ring — raised edge
+                // Bevelled ring — light top, dark bottom
                 Container(
-                  width: 228, height: 228,
+                  width: 236, height: 236,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: LinearGradient(
+                    gradient: const LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [
-                        Colors.white.withValues(alpha: 0.12),
-                        Colors.white.withValues(alpha: 0.02),
-                        Colors.black.withValues(alpha: 0.15),
-                      ],
-                      stops: const [0.0, 0.4, 1.0],
+                      colors: [Color(0xFF2A2A38), Color(0xFF101018)],
                     ),
                   ),
                 ),
-                // Main glass body
+                // Inner face — dark matte
                 Container(
-                  width: 220, height: 220,
+                  width: 224, height: 224,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      center: const Alignment(-0.25, -0.35),
-                      radius: 0.85,
-                      colors: [
-                        Colors.white.withValues(alpha: 0.08),
-                        Colors.white.withValues(alpha: 0.03),
-                        SmithMkColors.cardSurface.withValues(alpha: 0.9),
-                        SmithMkColors.background.withValues(alpha: 0.95),
-                      ],
-                      stops: const [0.0, 0.3, 0.7, 1.0],
-                    ),
-                    boxShadow: [
-                      // Inner light edge top-left
-                      BoxShadow(color: Colors.white.withValues(alpha: 0.06), blurRadius: 1, spreadRadius: 0),
-                    ],
+                    color: const Color(0xFF141420),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.04), width: 0.5),
                   ),
                 ),
-                // Inner inset shadow ring — concave illusion
-                Container(
-                  width: 210, height: 210,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.black.withValues(alpha: 0.2), width: 1.5),
-                  ),
-                ),
-                // Glass highlight — specular reflection top-left
+                // Subtle top highlight — sharp, not blurred
                 Positioned(
-                  top: 18, left: 30,
+                  top: 12, left: 50, right: 50,
                   child: Container(
-                    width: 80, height: 40,
+                    height: 2,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(40),
+                      borderRadius: BorderRadius.circular(1),
                       gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
                         colors: [
-                          Colors.white.withValues(alpha: 0.14),
-                          Colors.white.withValues(alpha: 0.0),
+                          Colors.transparent,
+                          Colors.white.withValues(alpha: 0.08),
+                          Colors.transparent,
                         ],
                       ),
                     ),
                   ),
                 ),
-                // Shimmer sweep animation
-                AnimatedBuilder(
-                  animation: _shimmerController,
-                  builder: (ctx, _) {
-                    final v = _shimmerController.value;
-                    return ClipOval(
-                      child: SizedBox(
-                        width: 220, height: 220,
-                        child: CustomPaint(
-                          painter: _ShimmerPainter(progress: v),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                // Inner ring border — subtle chrome edge
-                Container(
-                  width: 195, height: 195,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.04),
-                      width: 0.5,
-                    ),
-                  ),
-                ),
-                // Temperature arc + drag
+                // Arc dial
                 GestureDetector(
                   onPanUpdate: (details) {
-                    final dx = details.localPosition.dx - 115;
-                    final dy = details.localPosition.dy - 115;
+                    final dx = details.localPosition.dx - 120;
+                    final dy = details.localPosition.dy - 120;
                     var angle = atan2(dy, dx) * (180 / pi);
                     if (angle < 0) angle += 360;
                     var arcDeg = angle - 135;
@@ -412,7 +353,7 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                     setState(() => _targetTemp = snapped.clamp(16, 30));
                   },
                   child: SizedBox(
-                    width: 230, height: 230,
+                    width: 240, height: 240,
                     child: CustomPaint(
                       painter: _ThermostatPainter(
                         currentTemp: _temperature,
@@ -429,14 +370,21 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                     children: [
                       Text(
                         '${_targetTemp.toStringAsFixed(1)}°',
-                        style: const TextStyle(fontSize: 46, fontWeight: FontWeight.w200, color: SmithMkColors.textPrimary, height: 1),
-                      ),
-                      Text(
-                        _heatingOn ? 'HEATING' : 'OFF',
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 1.5, color: _heatingOn ? SmithMkColors.heatingActive : SmithMkColors.textTertiary),
+                        style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w200, color: SmithMkColors.textPrimary, height: 1),
                       ),
                       const SizedBox(height: 4),
-                      Text('Currently ${_temperature}°', style: const TextStyle(fontSize: 11, color: SmithMkColors.textSecondary)),
+                      Text(
+                        _heatingOn ? 'HEATING' : 'OFF',
+                        style: TextStyle(
+                          fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 2,
+                          color: _heatingOn ? SmithMkColors.heatingActive : SmithMkColors.textTertiary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Currently ${_temperature}°',
+                        style: const TextStyle(fontSize: 11, color: SmithMkColors.textSecondary),
+                      ),
                     ],
                   ),
                 ),
@@ -444,7 +392,6 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
             ),
           ),
           const SizedBox(height: 20),
-          // Controls
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -459,6 +406,7 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                     color: _heatingOn ? SmithMkColors.heatingActive.withValues(alpha: 0.15) : SmithMkColors.cardSurface,
                     shape: BoxShape.circle,
                     border: Border.all(color: _heatingOn ? SmithMkColors.heatingActive.withValues(alpha: 0.4) : SmithMkColors.glassBorder),
+                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 8, offset: const Offset(0, 3))],
                   ),
                   child: Icon(PhosphorIcons.power(PhosphorIconsStyle.bold), color: _heatingOn ? SmithMkColors.heatingActive : SmithMkColors.textTertiary, size: 22),
                 ),
@@ -860,37 +808,4 @@ class _BlindPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _BlindPainter old) => old.position != position;
-}
-
-// ─── SHIMMER PAINTER ───
-class _ShimmerPainter extends CustomPainter {
-  final double progress;
-  _ShimmerPainter({required this.progress});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    // Sweep a highlight band across the glass
-    final angle = progress * 2 * pi;
-    final dx = cos(angle) * cx * 0.6;
-    final dy = sin(angle) * cy * 0.6;
-    
-    final paint = Paint()
-      ..shader = RadialGradient(
-        center: Alignment(dx / cx, dy / cy),
-        radius: 0.5,
-        colors: [
-          Colors.white.withValues(alpha: 0.07),
-          Colors.white.withValues(alpha: 0.02),
-          Colors.transparent,
-        ],
-        stops: const [0.0, 0.4, 1.0],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-    
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _ShimmerPainter old) => old.progress != progress;
 }
