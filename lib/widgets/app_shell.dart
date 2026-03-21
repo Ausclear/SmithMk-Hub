@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../theme/smithmk_theme.dart';
 import '../pages/home_page.dart';
+import '../pages/dashboard_page.dart';
 import '../pages/placeholder_page.dart';
 
 class AppShell extends StatefulWidget {
@@ -16,8 +17,8 @@ class _AppShellState extends State<AppShell> {
   int _currentIndex = 0;
 
   final List<Widget> _pages = [
-    const HomePage(),
-    PlaceholderPage(title: 'Rooms', icon: PhosphorIcons.house(PhosphorIconsStyle.light)),
+    const DashboardPage(),
+    PlaceholderPage(title: 'Rooms', icon: PhosphorIcons.door(PhosphorIconsStyle.light)),
     PlaceholderPage(title: 'Lighting', icon: PhosphorIcons.lightbulb(PhosphorIconsStyle.light)),
     PlaceholderPage(title: 'Media', icon: PhosphorIcons.musicNotes(PhosphorIconsStyle.light)),
     PlaceholderPage(title: 'Settings', icon: PhosphorIcons.gear(PhosphorIconsStyle.light)),
@@ -26,10 +27,7 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 200),
-        child: _pages[_currentIndex],
-      ),
+      body: IndexedStack(index: _currentIndex, children: _pages),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           border: Border(top: BorderSide(color: SmithMkColors.glassBorder, width: 0.5)),
