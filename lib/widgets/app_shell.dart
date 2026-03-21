@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../theme/smithmk_theme.dart';
 import '../pages/home_page.dart';
 import '../pages/placeholder_page.dart';
@@ -14,12 +15,12 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = const [
-    HomePage(),
-    PlaceholderPage(title: 'Rooms', icon: Icons.room_preferences_outlined),
-    PlaceholderPage(title: 'Lighting', icon: Icons.lightbulb_outlined),
-    PlaceholderPage(title: 'Media', icon: Icons.music_note_outlined),
-    PlaceholderPage(title: 'Settings', icon: Icons.settings_outlined),
+  final List<Widget> _pages = [
+    const HomePage(),
+    PlaceholderPage(title: 'Rooms', icon: PhosphorIcons.house(PhosphorIconsStyle.light)),
+    PlaceholderPage(title: 'Lighting', icon: PhosphorIcons.lightbulb(PhosphorIconsStyle.light)),
+    PlaceholderPage(title: 'Media', icon: PhosphorIcons.musicNotes(PhosphorIconsStyle.light)),
+    PlaceholderPage(title: 'Settings', icon: PhosphorIcons.gear(PhosphorIconsStyle.light)),
   ];
 
   @override
@@ -48,30 +49,30 @@ class _AppShellState extends State<AppShell> {
             setState(() => _currentIndex = index);
           },
           indicatorColor: SmithMkColors.accentPrimary.withValues(alpha: 0.12),
-          destinations: const [
+          destinations: [
             NavigationDestination(
-              icon: Icon(Icons.home_outlined, color: SmithMkColors.textTertiary),
-              selectedIcon: Icon(Icons.home, color: SmithMkColors.accentPrimary),
+              icon: Icon(PhosphorIcons.house(PhosphorIconsStyle.light), color: SmithMkColors.textTertiary, size: 24),
+              selectedIcon: Icon(PhosphorIcons.house(PhosphorIconsStyle.fill), color: SmithMkColors.accentPrimary, size: 24),
               label: 'Home',
             ),
             NavigationDestination(
-              icon: Icon(Icons.room_preferences_outlined, color: SmithMkColors.textTertiary),
-              selectedIcon: Icon(Icons.room_preferences, color: SmithMkColors.accentPrimary),
+              icon: Icon(PhosphorIcons.door(PhosphorIconsStyle.light), color: SmithMkColors.textTertiary, size: 24),
+              selectedIcon: Icon(PhosphorIcons.door(PhosphorIconsStyle.fill), color: SmithMkColors.accentPrimary, size: 24),
               label: 'Rooms',
             ),
             NavigationDestination(
-              icon: Icon(Icons.lightbulb_outlined, color: SmithMkColors.textTertiary),
-              selectedIcon: Icon(Icons.lightbulb, color: SmithMkColors.accentPrimary),
+              icon: Icon(PhosphorIcons.lightbulb(PhosphorIconsStyle.light), color: SmithMkColors.textTertiary, size: 24),
+              selectedIcon: Icon(PhosphorIcons.lightbulb(PhosphorIconsStyle.fill), color: SmithMkColors.accentPrimary, size: 24),
               label: 'Lights',
             ),
             NavigationDestination(
-              icon: Icon(Icons.music_note_outlined, color: SmithMkColors.textTertiary),
-              selectedIcon: Icon(Icons.music_note, color: SmithMkColors.accentPrimary),
+              icon: Icon(PhosphorIcons.musicNotes(PhosphorIconsStyle.light), color: SmithMkColors.textTertiary, size: 24),
+              selectedIcon: Icon(PhosphorIcons.musicNotes(PhosphorIconsStyle.fill), color: SmithMkColors.accentPrimary, size: 24),
               label: 'Media',
             ),
             NavigationDestination(
-              icon: Icon(Icons.settings_outlined, color: SmithMkColors.textTertiary),
-              selectedIcon: Icon(Icons.settings, color: SmithMkColors.accentPrimary),
+              icon: Icon(PhosphorIcons.gear(PhosphorIconsStyle.light), color: SmithMkColors.textTertiary, size: 24),
+              selectedIcon: Icon(PhosphorIcons.gear(PhosphorIconsStyle.fill), color: SmithMkColors.accentPrimary, size: 24),
               label: 'Settings',
             ),
           ],
