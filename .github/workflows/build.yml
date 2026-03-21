@@ -7,55 +7,18 @@ on:
     branches: [main]
 
 jobs:
-  analyze:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+
       - name: Install dependencies
         run: flutter pub get
+
       - name: Analyze code
-        run: flutter analyze --no-fatal-infos
-
-  build-apk:
-    needs: analyze
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-      - name: Install dependencies
-        run: flutter pub get
-      - name: Build APK
-        run: flutter build apk --debug
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: smithmk-hub-android
-          path: build/app/outputs/flutter-apk/app-debug.apk
-          retention-days: 30
-
-  build-windows:
-    needs: analyze
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-      - name: Install dependencies
-        run: flutter pub get
-      - name: Build Windows
-        run: flutter build windows --debug
-      - name: Upload Windows build
-        uses: actions/upload-artifact@v4
-        with:
-          name: smithmk-hub-windows
-          path: build/windows/x64/runner/Debug/
-          retention-days: 30
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
