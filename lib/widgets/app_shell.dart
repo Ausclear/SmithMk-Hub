@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../theme/smithmk_theme.dart';
 import '../pages/home_page.dart';
-import '../pages/dashboard_demo.dart';
 import '../pages/placeholder_page.dart';
 
 class AppShell extends StatefulWidget {
@@ -18,7 +17,7 @@ class _AppShellState extends State<AppShell> {
 
   final List<Widget> _pages = [
     const HomePage(),
-    const DashboardDemo(),
+    PlaceholderPage(title: 'Rooms', icon: PhosphorIcons.house(PhosphorIconsStyle.light)),
     PlaceholderPage(title: 'Lighting', icon: PhosphorIcons.lightbulb(PhosphorIconsStyle.light)),
     PlaceholderPage(title: 'Media', icon: PhosphorIcons.musicNotes(PhosphorIconsStyle.light)),
     PlaceholderPage(title: 'Settings', icon: PhosphorIcons.gear(PhosphorIconsStyle.light)),
@@ -52,9 +51,9 @@ class _AppShellState extends State<AppShell> {
               label: 'Home',
             ),
             NavigationDestination(
-              icon: Icon(PhosphorIcons.squares(PhosphorIconsStyle.light), color: SmithMkColors.textTertiary, size: 24),
-              selectedIcon: Icon(PhosphorIcons.squares(PhosphorIconsStyle.fill), color: SmithMkColors.accentPrimary, size: 24),
-              label: 'Dashboard',
+              icon: Icon(PhosphorIcons.door(PhosphorIconsStyle.light), color: SmithMkColors.textTertiary, size: 24),
+              selectedIcon: Icon(PhosphorIcons.door(PhosphorIconsStyle.fill), color: SmithMkColors.accentPrimary, size: 24),
+              label: 'Rooms',
             ),
             NavigationDestination(
               icon: Icon(PhosphorIcons.lightbulb(PhosphorIconsStyle.light), color: SmithMkColors.textTertiary, size: 24),
