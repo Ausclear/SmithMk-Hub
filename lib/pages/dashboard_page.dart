@@ -274,7 +274,8 @@ class _DashboardPageState extends State<DashboardPage> {
             children: [
               _sectionTitle('CLIMATE'),
               // Heating / Cooling toggle
-              GestureDetector(
+              Flexible(
+                child: GestureDetector(
                 onTap: () {
                   HapticFeedback.lightImpact();
                   setState(() => _heatingMode = !_heatingMode);
@@ -299,6 +300,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     ],
                   ),
                 ),
+              ),
               ),
             ],
           ),
