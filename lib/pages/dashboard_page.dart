@@ -24,6 +24,11 @@ class _DashboardPageState extends State<DashboardPage> {
   final Map<String, double> _lightLevels = {'Master Bedroom': 0.0, 'Lounge': 0.0, 'Office': 0.0};
   String? _expandedRoom;
 
+  // Section order — long-press drag to reorder
+  final List<String> _sectionOrder = [
+    'weather', 'scenes', 'climate', 'status', 'energy', 'rooms', 'activity',
+  ];
+
   String get _greeting {
     final h = _now.hour;
     if (h < 12) return 'Good morning';
@@ -115,76 +120,97 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
+  Widget _buildSectionByKey(String key) {
+    switch (key) {
+      case 'weather': return _buildWeatherCard();
+      case 'scenes': return _buildScenesCard();
+      case 'climate': return _buildClimateCard();
+      case 'status': return Row(children: [
+        Expanded(child: _buildSecurityCard()),
+        const SizedBox(width: 12),
+        Expanded(child: _buildLightsCard()),
+      ]);
+      case 'energy': return Row(children: [
+        Expanded(child: _buildEVCard()),
+        const SizedBox(width: 12),
+        Expanded(child: _buildEnergyCard()),
+      ]);
+      case 'rooms': return _buildRoomsCard();
+      case 'activity': return _buildActivityCard();
+      default: return const SizedBox.shrink();
+    }
+  }
+
   // ─── TWO COLUMN LAYOUT (tablet/desktop) ───
   Widget _buildTwoColumnLayout() {
+    final leftKeys = _sectionOrder.where((k) => ['weather', 'climate', 'status', 'energy'].contains(k)).toList();
+    final rightKeys = _sectionOrder.where((k) => ['scenes', 'rooms', 'activity'].contains(k)).toList();
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Left column
         Expanded(
           child: Column(
-            children: [
-              _buildWeatherCard(),
-              const SizedBox(height: 12),
-              Row(children: [
-                Expanded(child: _buildClimateCard()),
-                const SizedBox(width: 12),
-                Expanded(child: _buildSecurityCard()),
-              ]),
-              const SizedBox(height: 12),
-              Row(children: [
-                Expanded(child: _buildLightsCard()),
-                const SizedBox(width: 12),
-                Expanded(child: _buildEVCard()),
-              ]),
-              const SizedBox(height: 12),
-              _buildEnergyCard(),
-            ],
+            children: leftKeys.asMap().entries.map((e) => Padding(
+              padding: EdgeInsets.only(bottom: e.key < leftKeys.length - 1 ? 12 : 0),
+              child: _buildSectionByKey(e.value),
+            )).toList(),
           ),
         ),
         const SizedBox(width: 16),
-        // Right column
         Expanded(
           child: Column(
-            children: [
-              _buildScenesCard(),
-              const SizedBox(height: 12),
-              _buildRoomsCard(),
-              const SizedBox(height: 12),
-              _buildActivityCard(),
-            ],
+            children: rightKeys.asMap().entries.map((e) => Padding(
+              padding: EdgeInsets.only(bottom: e.key < rightKeys.length - 1 ? 12 : 0),
+              child: _buildSectionByKey(e.value),
+            )).toList(),
           ),
         ),
       ],
     );
   }
 
-  // ─── SINGLE COLUMN LAYOUT (phone) ───
+  // ─── SINGLE COLUMN LAYOUT (phone) — REORDERABLE ───
   Widget _buildSingleColumnLayout() {
-    return Column(
-      children: [
-        _buildWeatherCard(),
-        const SizedBox(height: 12),
-        _buildScenesCard(),
-        const SizedBox(height: 12),
-        Row(children: [
-          Expanded(child: _buildClimateCard()),
-          const SizedBox(width: 12),
-          Expanded(child: _buildSecurityCard()),
-        ]),
-        const SizedBox(height: 12),
-        Row(children: [
-          Expanded(child: _buildLightsCard()),
-          const SizedBox(width: 12),
-          Expanded(child: _buildEVCard()),
-        ]),
-        const SizedBox(height: 12),
-        _buildEnergyCard(),
-        const SizedBox(height: 12),
-        _buildRoomsCard(),
-        const SizedBox(height: 12),
-        _buildActivityCard(),
-      ],
+    return ReorderableListView(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      onReorder: (oldIndex, newIndex) {
+        HapticFeedback.mediumImpact();
+        setState(() {
+          if (oldIndex < newIndex) newIndex -= 1;
+          final item = _sectionOrder.removeAt(oldIndex);
+          _sectionOrder.insert(newIndex, item);
+        });
+      },
+      proxyDecorator: (child, index, animation) {
+        return AnimatedBuilder(
+          animation: animation,
+          builder: (context, child) {
+            final scale = Tween<double>(begin: 1.0, end: 1.03).animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeInOutCubicEmphasized),
+            );
+            return Transform.scale(
+              scale: scale.value,
+              child: Material(
+                color: Colors.transparent,
+                elevation: 8,
+                shadowColor: SmithMkColors.accent.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(16),
+                child: child,
+              ),
+            );
+          },
+          child: child,
+        );
+      },
+      children: _sectionOrder.asMap().entries.map((e) {
+        return Padding(
+          key: ValueKey(e.value),
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _buildSectionByKey(e.value),
+        );
+      }).toList(),
     );
   }
 
@@ -635,31 +661,32 @@ class _DashboardPageState extends State<DashboardPage> {
     final level = _lightLevels[room.name] ?? 0.0;
     final isOn = level > 0;
 
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        setState(() {
-          _expandedRoom = isExpanded ? null : room.name;
-        });
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOutCubicEmphasized,
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: EdgeInsets.all(isExpanded ? 14 : 10),
-        decoration: BoxDecoration(
-          color: isExpanded
-              ? SmithMkColors.accent.withValues(alpha: 0.06)
-              : SmithMkColors.cardSurfaceAlt,
-          borderRadius: BorderRadius.circular(12),
-          border: isExpanded
-              ? Border.all(color: SmithMkColors.accent.withValues(alpha: 0.15))
-              : null,
-        ),
-        child: Column(
-          children: [
-            // Room header row
-            Row(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOutCubicEmphasized,
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.all(isExpanded ? 14 : 10),
+      decoration: BoxDecoration(
+        color: isExpanded
+            ? SmithMkColors.accent.withValues(alpha: 0.06)
+            : SmithMkColors.cardSurfaceAlt,
+        borderRadius: BorderRadius.circular(12),
+        border: isExpanded
+            ? Border.all(color: SmithMkColors.accent.withValues(alpha: 0.15))
+            : null,
+      ),
+      child: Column(
+        children: [
+          // Room header row — TAP THIS to expand/collapse
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              setState(() {
+                _expandedRoom = isExpanded ? null : room.name;
+              });
+            },
+            behavior: HitTestBehavior.opaque,
+            child: Row(
               children: [
                 Text(room.emoji, style: const TextStyle(fontSize: 18)),
                 const SizedBox(width: 10),
@@ -684,8 +711,26 @@ class _DashboardPageState extends State<DashboardPage> {
                     child: Text(isOn ? 'ON' : 'OFF', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: isOn ? SmithMkColors.accent : SmithMkColors.textTertiary)),
                   ),
                 ),
+                if (isExpanded) ...[
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      setState(() => _expandedRoom = null);
+                    },
+                    child: Container(
+                      width: 24, height: 24,
+                      decoration: BoxDecoration(
+                        color: SmithMkColors.inactive.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Center(child: Text('✕', style: TextStyle(fontSize: 12, color: SmithMkColors.textTertiary))),
+                    ),
+                  ),
+                ],
               ],
             ),
+          ),
             // Expanded dimmer slider
             AnimatedCrossFade(
               duration: const Duration(milliseconds: 300),
