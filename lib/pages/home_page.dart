@@ -58,28 +58,111 @@ class _HomePageState extends State<HomePage> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final isWide = constraints.maxWidth > 600;
-            final horizontalPad = isWide ? 32.0 : 20.0;
+            final w = constraints.maxWidth;
 
-            return Padding(
-              padding: EdgeInsets.symmetric(horizontal: horizontalPad),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 20),
-                  _buildHeader(),
-                  const SizedBox(height: 14),
-                  _buildConnectionPills(),
-                  const SizedBox(height: 24),
-                  Expanded(child: _buildResponsiveGrid(constraints)),
-                  if (_selectedTile != null) _buildSelectedLabel(),
-                  const SizedBox(height: 16),
-                ],
-              ),
-            );
+            // Three layouts:
+            // Phone (< 600px): centred 3-col grid, fills the screen
+            // Tablet (600-1000px): centred content, 3-col grid with bigger tiles
+            // Desktop (1000px+): two-panel — header/info left, tile grid right
+
+            if (w >= 1000) {
+              return _buildDesktopLayout(constraints);
+            } else {
+              return _buildMobileLayout(constraints);
+            }
           },
         ),
       ),
+    );
+  }
+
+  // ─── MOBILE / TABLET LAYOUT ───
+  Widget _buildMobileLayout(BoxConstraints constraints) {
+    final w = constraints.maxWidth;
+    final isTablet = w >= 600;
+    final pad = isTablet ? 32.0 : 20.0;
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: pad),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 20),
+          _buildHeader(),
+          const SizedBox(height: 14),
+          _buildConnectionPills(),
+          const SizedBox(height: 24),
+          Expanded(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: _buildTileGrid(3),
+              ),
+            ),
+          ),
+          if (_selectedTile != null) _buildSelectedLabel(),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  // ─── DESKTOP LAYOUT ───
+  Widget _buildDesktopLayout(BoxConstraints constraints) {
+    return Row(
+      children: [
+        // Left panel — header, status, info
+        SizedBox(
+          width: 340,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(32, 28, 24, 28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'SMITHMK HOME',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: SmithMkColors.gold, letterSpacing: 4),
+                ),
+                const SizedBox(height: 4),
+                Text(_dateStr, style: const TextStyle(fontSize: 13, color: SmithMkColors.textTertiary)),
+                const SizedBox(height: 24),
+                Text(
+                  _timeStr,
+                  style: const TextStyle(fontSize: 64, fontWeight: FontWeight.w200, color: SmithMkColors.textPrimary, letterSpacing: -3, height: 1),
+                ),
+                const SizedBox(height: 8),
+                const Row(
+                  children: [
+                    Text('☁ ', style: TextStyle(fontSize: 16)),
+                    Text('14°C  Partly cloudy', style: TextStyle(fontSize: 14, color: SmithMkColors.textSecondary)),
+                  ],
+                ),
+                const SizedBox(height: 32),
+                _buildConnectionPills(),
+                const Spacer(),
+                if (_selectedTile != null) ...[
+                  _buildSelectedLabel(),
+                  const SizedBox(height: 16),
+                ],
+              ],
+            ),
+          ),
+        ),
+        // Divider
+        Container(width: 1, color: SmithMkColors.glassBorder),
+        // Right panel — tile grid
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: _buildTileGrid(3),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -121,12 +204,12 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildConnectionPills() {
-    return Row(
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
       children: [
         _pill('HA', SmithMkColors.error),
-        const SizedBox(width: 8),
         _pill('SUPABASE', SmithMkColors.success),
-        const SizedBox(width: 8),
         _pill('SOLAR', SmithMkColors.error),
       ],
     );
@@ -157,29 +240,38 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildResponsiveGrid(BoxConstraints constraints) {
-    // maxCrossAxisExtent caps each tile at 140px.
-    // This auto-fits columns:
-    //   ~360px phone  → 2-3 columns
-    //   ~430px phone  → 3 columns
-    //   ~768px tablet → 5 columns
-    //   ~1024px+      → 7+ columns
-    // Tiles never stretch beyond 140px — they just add more columns.
-    return GridView.builder(
-      physics: const BouncingScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 140,
-        mainAxisSpacing: 14,
-        crossAxisSpacing: 14,
-      ),
-      itemCount: _tiles.length,
-      itemBuilder: (ctx, i) => _buildTile(i),
+  Widget _buildTileGrid(int columns) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 14.0;
+        final availableWidth = constraints.maxWidth - (spacing * (columns - 1));
+        final tileSize = availableWidth / columns;
+        final rows = (_tiles.length / columns).ceil();
+        final totalHeight = rows * tileSize + (rows - 1) * spacing;
+
+        return SizedBox(
+          height: totalHeight.clamp(0.0, constraints.maxHeight),
+          child: GridView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns,
+              mainAxisSpacing: spacing,
+              crossAxisSpacing: spacing,
+            ),
+            itemCount: _tiles.length,
+            itemBuilder: (ctx, i) => _buildTile(i, tileSize),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildTile(int index) {
+  Widget _buildTile(int index, double tileSize) {
     final tile = _tiles[index];
     final isSelected = _selectedTile == index;
+    // Scale icon size relative to tile — bigger tile, bigger icon
+    final iconSize = (tileSize * 0.28).clamp(28.0, 48.0);
+    final fontSize = (tileSize * 0.08).clamp(9.0, 12.0);
 
     return GestureDetector(
       onTap: () {
@@ -209,7 +301,7 @@ class _HomePageState extends State<HomePage> {
             Positioned(
               top: 0, left: 0, right: 0,
               child: Container(
-                height: 35,
+                height: tileSize * 0.3,
                 decoration: BoxDecoration(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(17)),
                   gradient: LinearGradient(
@@ -224,12 +316,12 @@ class _HomePageState extends State<HomePage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(tile.icon, size: 32, color: isSelected ? tile.color : tile.color.withValues(alpha: 0.65)),
-                  const SizedBox(height: 8),
+                  Icon(tile.icon, size: iconSize, color: isSelected ? tile.color : tile.color.withValues(alpha: 0.65)),
+                  SizedBox(height: tileSize * 0.06),
                   Text(
                     tile.name.toUpperCase(),
                     style: TextStyle(
-                      fontSize: 10, fontWeight: FontWeight.w600,
+                      fontSize: fontSize, fontWeight: FontWeight.w600,
                       color: isSelected ? SmithMkColors.textPrimary : SmithMkColors.textSecondary,
                       letterSpacing: 1,
                     ),
@@ -239,7 +331,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                   if (isSelected)
                     Container(
-                      margin: const EdgeInsets.only(top: 5),
+                      margin: EdgeInsets.only(top: tileSize * 0.04),
                       width: 20, height: 2,
                       decoration: BoxDecoration(color: SmithMkColors.gold, borderRadius: BorderRadius.circular(1)),
                     ),
