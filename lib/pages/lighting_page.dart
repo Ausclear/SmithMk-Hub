@@ -248,18 +248,14 @@ class _VerticalDimmerSliderState extends State<_VerticalDimmerSlider> {
           clipBehavior: Clip.none,
           alignment: Alignment.bottomCenter,
           children: [
-            // Track — recessed
+            // Track — recessed, SHARP edges no blur
             Container(
               width: 36,
               height: 180,
               decoration: BoxDecoration(
                 color: const Color(0xFF161616),
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 6, offset: const Offset(0, 2)),
-                  const BoxShadow(color: Color(0xFF0A0A0A), blurRadius: 4, spreadRadius: -2),
-                ],
+                border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
               ),
             ),
             // Fill — starts dim amber, gets brighter as it rises
@@ -302,9 +298,7 @@ class _VerticalDimmerSliderState extends State<_VerticalDimmerSlider> {
                         : Colors.white.withValues(alpha: 0.1),
                   ),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 6, offset: const Offset(0, 3)),
-                    if (widget.isOn)
-                      BoxShadow(color: SmithMkColors.accent.withValues(alpha: 0.1), blurRadius: 10),
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 1, offset: const Offset(0, 2)),
                   ],
                 ),
                 child: Center(

@@ -477,15 +477,8 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  // ─── ENERGY CARD ───
+  // ─── ENERGY CARD with RADIAL GAUGES ───
   Widget _buildEnergyCard() {
-    final items = [
-      _EnergyItem('Solar', '0', 'W'),
-      _EnergyItem('Battery', '0', '%'),
-      _EnergyItem('Home', '0', 'W'),
-      _EnergyItem('EV', '0', 'W'),
-    ];
-
     return _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -494,14 +487,65 @@ class _DashboardPageState extends State<DashboardPage> {
           const SizedBox(height: 14),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: items.map((e) => Column(
-              children: [
-                Text('${e.value}${e.unit}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: SmithMkColors.textPrimary)),
-                const SizedBox(height: 4),
-                Text(e.label, style: const TextStyle(fontSize: 10, color: SmithMkColors.textTertiary)),
-              ],
-            )).toList(),
+            children: [
+              _buildEnergyGauge('Solar', 0, 5000, 'W', SmithMkColors.accent),
+              _buildEnergyGauge('Battery', 0, 100, '%', const Color(0xFF4ADE80)),
+              _buildEnergyGauge('Home', 0, 5000, 'W', const Color(0xFF48CAE4)),
+              _buildEnergyGauge('EV', 0, 7000, 'W', SmithMkColors.accent),
+            ],
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEnergyGauge(String label, double value, double max, String unit, Color colour) {
+    return SizedBox(
+      width: 70,
+      height: 80,
+      child: Column(
+        children: [
+          SizedBox(
+            width: 56,
+            height: 56,
+            child: SfRadialGauge(
+              axes: <RadialAxis>[
+                RadialAxis(
+                  minimum: 0,
+                  maximum: max,
+                  startAngle: 135,
+                  endAngle: 45,
+                  showLabels: false,
+                  showTicks: false,
+                  axisLineStyle: AxisLineStyle(
+                    thickness: 5,
+                    color: colour.withValues(alpha: 0.1),
+                    cornerStyle: CornerStyle.bothCurve,
+                  ),
+                  pointers: <GaugePointer>[
+                    RangePointer(
+                      value: value,
+                      width: 5,
+                      color: colour,
+                      cornerStyle: CornerStyle.bothCurve,
+                    ),
+                  ],
+                  annotations: <GaugeAnnotation>[
+                    GaugeAnnotation(
+                      widget: Text(
+                        '${value.round()}',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: colour),
+                      ),
+                      angle: 90,
+                      positionFactor: 0.0,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(label, style: const TextStyle(fontSize: 9, color: SmithMkColors.textTertiary)),
         ],
       ),
     );
@@ -689,10 +733,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                 decoration: BoxDecoration(
                                   color: const Color(0xFF161616),
                                   borderRadius: BorderRadius.circular(18),
-                                  border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
-                                  boxShadow: [
-                                    BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 6, offset: const Offset(0, 2)),
-                                  ],
+                                  border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
                                 ),
                               ),
                               // Fill — starts dim amber, gets brighter
@@ -731,8 +772,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                     ),
                                     border: Border.all(color: isOn ? SmithMkColors.accent.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.1)),
                                     boxShadow: [
-                                      BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 6, offset: const Offset(0, 3)),
-                                      if (isOn) BoxShadow(color: SmithMkColors.accent.withValues(alpha: 0.1), blurRadius: 10),
+                                      BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 1, offset: const Offset(0, 2)),
                                     ],
                                   ),
                                   child: Center(
@@ -843,11 +883,6 @@ class _Forecast {
   final String day, emoji;
   final int high, low;
   const _Forecast(this.day, this.emoji, this.high, this.low);
-}
-
-class _EnergyItem {
-  final String label, value, unit;
-  const _EnergyItem(this.label, this.value, this.unit);
 }
 
 class _Scene {
