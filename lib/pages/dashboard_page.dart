@@ -19,7 +19,10 @@ class _DashboardPageState extends State<DashboardPage> {
   double _targetTemp = 22.0;
   final double _currentTemp = 19.0;
   bool _heatingOn = true;
+  bool _heatingMode = true; // true=heating, false=cooling
   int _activeScene = 1; // Day
+  final Map<String, double> _lightLevels = {'Master Bedroom': 0.0, 'Lounge': 0.0, 'Office': 0.0};
+  String? _expandedRoom;
 
   String get _greeting {
     final h = _now.hour;
@@ -249,23 +252,162 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  // ─── CLIMATE CARD ───
+  // ─── CLIMATE CARD with THERMOSTAT DIAL ───
+  Color _getTempColour(double temp) {
+    final f = (temp - 12) / 18;
+    if (f <= 0.3) return Color.lerp(const Color(0xFF48CAE4), const Color(0xFF78D6B0), f / 0.3)!;
+    if (f <= 0.55) return Color.lerp(const Color(0xFF78D6B0), const Color(0xFFFFB300), (f - 0.3) / 0.25)!;
+    if (f <= 0.78) return Color.lerp(const Color(0xFFFFB300), const Color(0xFFFF8C00), (f - 0.55) / 0.23)!;
+    return Color.lerp(const Color(0xFFFF8C00), const Color(0xFFFF5722), (f - 0.78) / 0.22)!;
+  }
+
   Widget _buildClimateCard() {
+    final tempCol = _getTempColour(_targetTemp);
+    final modeCol = _heatingMode ? SmithMkColors.heatingMode : const Color(0xFF48CAE4);
+
     return _card(
+      padding: const EdgeInsets.all(16),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _sectionTitle('CLIMATE'),
-              const Text('🌡️', style: TextStyle(fontSize: 20)),
+              // Heating / Cooling toggle
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  setState(() => _heatingMode = !_heatingMode);
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: modeCol.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: modeCol.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_heatingMode ? '🔥' : '❄️', style: const TextStyle(fontSize: 12)),
+                      const SizedBox(width: 4),
+                      Text(
+                        _heatingMode ? 'HEATING' : 'COOLING',
+                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: modeCol, letterSpacing: 1),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
-          Text('${_currentTemp}°', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: SmithMkColors.textPrimary)),
-          Text(_heatingOn ? 'Heating to ${_targetTemp.round()}°' : '—', style: TextStyle(fontSize: 11, color: _heatingOn ? SmithMkColors.heatingMode : SmithMkColors.textTertiary)),
+          // Syncfusion thermostat dial
+          SizedBox(
+            height: 180,
+            child: SfRadialGauge(
+              axes: <RadialAxis>[
+                RadialAxis(
+                  minimum: 12,
+                  maximum: 30,
+                  startAngle: 135,
+                  endAngle: 45,
+                  showLabels: true,
+                  showTicks: true,
+                  labelOffset: 18,
+                  interval: 3,
+                  axisLabelStyle: const GaugeTextStyle(fontSize: 8, color: Color(0xFF707070), fontWeight: FontWeight.w500),
+                  axisLineStyle: const AxisLineStyle(thickness: 6, color: Color(0xFF1A1A1A), cornerStyle: CornerStyle.bothCurve),
+                  majorTickStyle: const MajorTickStyle(length: 8, thickness: 1.2, color: Color(0xFF333333)),
+                  minorTickStyle: const MinorTickStyle(length: 4, thickness: 0.6, color: Color(0xFF222222)),
+                  minorTicksPerInterval: 5,
+                  ranges: <GaugeRange>[
+                    GaugeRange(
+                      startValue: 12,
+                      endValue: _targetTemp,
+                      startWidth: 6,
+                      endWidth: 6,
+                      gradient: const SweepGradient(
+                        colors: <Color>[Color(0xFF48CAE4), Color(0xFF78D6B0), Color(0xFFFFB300), Color(0xFFFF8C00), Color(0xFFFF5722)],
+                        stops: <double>[0.0, 0.3, 0.55, 0.78, 1.0],
+                      ),
+                    ),
+                  ],
+                  pointers: <GaugePointer>[
+                    MarkerPointer(
+                      value: _targetTemp,
+                      markerType: MarkerType.circle,
+                      markerWidth: 16,
+                      markerHeight: 16,
+                      color: tempCol,
+                      borderColor: const Color(0xFFEEEEEE),
+                      borderWidth: 2.5,
+                      enableDragging: true,
+                      onValueChanged: (value) {
+                        final snapped = (value * 2).round() / 2;
+                        if (snapped != _targetTemp) HapticFeedback.selectionClick();
+                        setState(() => _targetTemp = snapped.clamp(12, 30));
+                      },
+                    ),
+                  ],
+                  annotations: <GaugeAnnotation>[
+                    GaugeAnnotation(
+                      widget: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('${_targetTemp.toStringAsFixed(1)}°', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w200, color: Color(0xFFEEEEEE), height: 1)),
+                          const SizedBox(height: 2),
+                          Text('Currently ${_currentTemp}°', style: const TextStyle(fontSize: 10, color: Color(0xFF707070))),
+                        ],
+                      ),
+                      angle: 90,
+                      positionFactor: 0.0,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          // +/- and power row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _tapButton('−', () { HapticFeedback.selectionClick(); setState(() => _targetTemp = (_targetTemp - 0.5).clamp(12, 30)); }),
+              const SizedBox(width: 24),
+              GestureDetector(
+                onTap: () { HapticFeedback.mediumImpact(); setState(() => _heatingOn = !_heatingOn); },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  width: 40, height: 40,
+                  decoration: BoxDecoration(
+                    color: _heatingOn ? modeCol.withValues(alpha: 0.15) : SmithMkColors.cardSurfaceAlt,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: _heatingOn ? modeCol.withValues(alpha: 0.4) : SmithMkColors.glassBorder),
+                  ),
+                  child: Icon(Icons.power_settings_new, color: _heatingOn ? modeCol : SmithMkColors.textTertiary, size: 18),
+                ),
+              ),
+              const SizedBox(width: 24),
+              _tapButton('+', () { HapticFeedback.selectionClick(); setState(() => _targetTemp = (_targetTemp + 0.5).clamp(12, 30)); }),
+            ],
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _tapButton(String label, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36, height: 36,
+        decoration: BoxDecoration(
+          color: SmithMkColors.cardSurfaceAlt,
+          shape: BoxShape.circle,
+          border: Border.all(color: SmithMkColors.glassBorder),
+        ),
+        child: Center(child: Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFFB0B0B0)))),
       ),
     );
   }
@@ -423,7 +565,7 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  // ─── ROOMS CARD ───
+  // ─── ROOMS CARD with EXPANDABLE LIGHTS ───
   Widget _buildRoomsCard() {
     final rooms = [
       _Room('Master Bedroom', '🛏️', 0, 2),
@@ -443,32 +585,202 @@ class _DashboardPageState extends State<DashboardPage> {
             ],
           ),
           const SizedBox(height: 10),
-          ...rooms.map((r) => Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: SmithMkColors.cardSurfaceAlt,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
+          ...rooms.map((r) => _buildRoomRow(r)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRoomRow(_Room room) {
+    final isExpanded = _expandedRoom == room.name;
+    final level = _lightLevels[room.name] ?? 0.0;
+    final isOn = level > 0;
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setState(() {
+          _expandedRoom = isExpanded ? null : room.name;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOutCubicEmphasized,
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: EdgeInsets.all(isExpanded ? 14 : 10),
+        decoration: BoxDecoration(
+          color: isExpanded
+              ? SmithMkColors.accent.withValues(alpha: 0.06)
+              : SmithMkColors.cardSurfaceAlt,
+          borderRadius: BorderRadius.circular(12),
+          border: isExpanded
+              ? Border.all(color: SmithMkColors.accent.withValues(alpha: 0.15))
+              : null,
+        ),
+        child: Column(
+          children: [
+            // Room header row
+            Row(
               children: [
-                Text(r.emoji, style: const TextStyle(fontSize: 18)),
+                Text(room.emoji, style: const TextStyle(fontSize: 18)),
                 const SizedBox(width: 10),
-                Expanded(child: Text(r.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: SmithMkColors.textPrimary))),
-                Text('${r.lightsOn}/${r.lightsTotal}', style: const TextStyle(fontSize: 12, color: SmithMkColors.textTertiary)),
+                Expanded(child: Text(room.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: SmithMkColors.textPrimary))),
+                Text('${room.lightsOn}/${room.lightsTotal}', style: const TextStyle(fontSize: 12, color: SmithMkColors.textTertiary)),
                 const SizedBox(width: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: SmithMkColors.inactive.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(6),
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    setState(() {
+                      _lightLevels[room.name] = isOn ? 0.0 : 0.75;
+                    });
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isOn ? SmithMkColors.accent.withValues(alpha: 0.15) : SmithMkColors.inactive.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(6),
+                      border: isOn ? Border.all(color: SmithMkColors.accent.withValues(alpha: 0.3)) : null,
+                    ),
+                    child: Text(isOn ? 'ON' : 'OFF', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: isOn ? SmithMkColors.accent : SmithMkColors.textTertiary)),
                   ),
-                  child: const Text('OFF', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: SmithMkColors.textTertiary)),
                 ),
               ],
             ),
-          )),
-        ],
+            // Expanded dimmer slider
+            AnimatedCrossFade(
+              duration: const Duration(milliseconds: 300),
+              crossFadeState: isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+              firstChild: const SizedBox.shrink(),
+              secondChild: Padding(
+                padding: const EdgeInsets.only(top: 14),
+                child: SizedBox(
+                  height: 160,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Vertical dimmer slider — matching lighting page
+                      GestureDetector(
+                        onVerticalDragUpdate: (d) {
+                          final frac = 1 - (d.localPosition.dy / 160);
+                          final clamped = frac.clamp(0.0, 1.0);
+                          final rounded = (clamped * 100).round() / 100;
+                          if ((rounded * 4).round() != (level * 4).round()) {
+                            if (rounded == 0 || rounded == 1) {
+                              HapticFeedback.mediumImpact();
+                            } else {
+                              HapticFeedback.selectionClick();
+                            }
+                          }
+                          setState(() => _lightLevels[room.name] = rounded);
+                        },
+                        child: SizedBox(
+                          width: 52,
+                          height: 160,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            alignment: Alignment.bottomCenter,
+                            children: [
+                              // Track
+                              Container(
+                                width: 36, height: 160,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF161616),
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
+                                  boxShadow: [
+                                    BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 6, offset: const Offset(0, 2)),
+                                  ],
+                                ),
+                              ),
+                              // Fill — starts dim amber, gets brighter
+                              Positioned(
+                                bottom: 0,
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 60),
+                                  width: 36,
+                                  height: (160 * level).clamp(0.0, 160.0),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(18),
+                                    gradient: LinearGradient(
+                                      begin: Alignment.bottomCenter,
+                                      end: Alignment.topCenter,
+                                      colors: [
+                                        SmithMkColors.accent.withValues(alpha: 0.15 + level * 0.15),
+                                        SmithMkColors.accent.withValues(alpha: 0.3 + level * 0.55),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              // Thumb — clamped, never disappears
+                              Positioned(
+                                bottom: (138 * level).clamp(0.0, 138.0),
+                                child: Container(
+                                  width: 44, height: 22,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(11),
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: isOn
+                                          ? [const Color(0xFF4A3800), const Color(0xFF332600)]
+                                          : [const Color(0xFF3A3A3A), const Color(0xFF222222)],
+                                    ),
+                                    border: Border.all(color: isOn ? SmithMkColors.accent.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.1)),
+                                    boxShadow: [
+                                      BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 6, offset: const Offset(0, 3)),
+                                      if (isOn) BoxShadow(color: SmithMkColors.accent.withValues(alpha: 0.1), blurRadius: 10),
+                                    ],
+                                  ),
+                                  child: Center(
+                                    child: Container(width: 18, height: 2, decoration: BoxDecoration(borderRadius: BorderRadius.circular(1), color: isOn ? SmithMkColors.accent.withValues(alpha: 0.4) : Colors.white.withValues(alpha: 0.15))),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      // Info + presets
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('${(level * 100).round()}%', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600, color: isOn ? SmithMkColors.accent : SmithMkColors.textTertiary)),
+                            const Text('Brightness', style: TextStyle(fontSize: 10, color: SmithMkColors.textTertiary)),
+                            const Spacer(),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: [25, 50, 75, 100].map((p) => GestureDetector(
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  setState(() => _lightLevels[room.name] = p / 100);
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    color: (level * 100).round() == p ? SmithMkColors.accent.withValues(alpha: 0.15) : SmithMkColors.cardSurface,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: (level * 100).round() == p ? SmithMkColors.accent.withValues(alpha: 0.3) : SmithMkColors.glassBorder),
+                                  ),
+                                  child: Text('$p%', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: (level * 100).round() == p ? SmithMkColors.accent : SmithMkColors.textTertiary)),
+                                ),
+                              )).toList(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -245,6 +245,7 @@ class _VerticalDimmerSliderState extends State<_VerticalDimmerSlider> {
         width: 52,
         height: 180,
         child: Stack(
+          clipBehavior: Clip.none,
           alignment: Alignment.bottomCenter,
           children: [
             // Track — recessed
@@ -261,29 +262,29 @@ class _VerticalDimmerSliderState extends State<_VerticalDimmerSlider> {
                 ],
               ),
             ),
-            // Fill
+            // Fill — starts dim amber, gets brighter as it rises
             Positioned(
               bottom: 0,
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 60),
                 width: 36,
-                height: 180 * fillPct,
+                height: (180 * fillPct).clamp(0.0, 180.0),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(18),
                   gradient: LinearGradient(
                     begin: Alignment.bottomCenter,
                     end: Alignment.topCenter,
                     colors: [
-                      SmithMkColors.accent.withValues(alpha: alpha),
-                      SmithMkColors.accent.withValues(alpha: alpha * 0.4),
+                      SmithMkColors.accent.withValues(alpha: 0.15 + fillPct * 0.15),
+                      SmithMkColors.accent.withValues(alpha: 0.3 + fillPct * 0.55),
                     ],
                   ),
                 ),
               ),
             ),
-            // Thumb
+            // Thumb — clamped so it never disappears
             Positioned(
-              bottom: (180 * fillPct) - 11,
+              bottom: (158 * fillPct).clamp(0.0, 158.0),
               child: Container(
                 width: 44, height: 22,
                 decoration: BoxDecoration(
