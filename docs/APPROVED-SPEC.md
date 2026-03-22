@@ -109,3 +109,31 @@ Mark approved the HTML demo. Now build it in Flutter using Flutter's full power.
 - Spring physics: Curves.easeInOutCubicEmphasized
 - Staggered fade+slide entry for cards
 - Haptic feedback on every interaction
+
+## ROOMS PAGE REQUIREMENTS (NOT YET APPROVED - IN PROGRESS)
+
+### Flow
+1. Room starts as EMPTY canvas
+2. Tap "Add Room" → opens a FULL PAGE (not modal) showing ALL available HA devices with checkboxes
+   - Every light entity from HA
+   - Every blind entity from HA  
+   - Ducted aircon (NOT split system)
+   - Radiators
+   - Media devices
+   - Sensors
+3. Tick the devices you want in this room → creates the room
+4. Multiple rooms = horizontal swipe carousel (PageView in Flutter)
+5. Dot indicators showing which room you're on
+
+### Device Controls (tap to open)
+- **Tap a light** → vertical dimmer modal popup (MUST match the approved dashboard dimmer exactly — same amber fill, same thumb, same colours, same pointer drag)
+- **Tap a blind** → blind visual modal showing the blind opening/closing with fabric animation (ORIGINAL design, NOT a copy of the PWA BlindVisual)
+- **Tap aircon** → temperature control
+- **Tap media** → media controls
+
+### Critical Rules
+- Navigation (side rail/bottom nav) lives in AppShell ONLY — individual pages do NOT include nav
+- Dimmer slider MUST match the dashboard approved version exactly
+- Ducted aircon, NOT split system
+- All neumorphic dark styling matching dashboard
+- Monochrome Phosphor icons throughout, emoji only for room avatars and scenes
