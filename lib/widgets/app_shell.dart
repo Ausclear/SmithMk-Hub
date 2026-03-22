@@ -18,18 +18,18 @@ class _AppShellState extends State<AppShell> {
   int? _currentPage; // null = home launcher
 
   final List<_NavPage> _pages = [
-    _NavPage('Home', '🏠'),
-    _NavPage('Dashboard', '📊'),
-    _NavPage('Rooms', '🚪'),
-    _NavPage('Lights', '💡'),
-    _NavPage('Power', '🔌'),
-    _NavPage('Blinds', '🪟'),
-    _NavPage('Climate', '🌡️'),
-    _NavPage('Security', '🛡️'),
-    _NavPage('Energy', '⚡'),
-    _NavPage('Media', '🎵'),
-    _NavPage('Irrigation', '🌿'),
-    _NavPage('Settings', '⚙️'),
+    _NavPage('Home', PhosphorIcons.house(PhosphorIconsStyle.light), PhosphorIcons.house(PhosphorIconsStyle.fill)),
+    _NavPage('Dashboard', PhosphorIcons.squaresFour(PhosphorIconsStyle.light), PhosphorIcons.squaresFour(PhosphorIconsStyle.fill)),
+    _NavPage('Rooms', PhosphorIcons.door(PhosphorIconsStyle.light), PhosphorIcons.door(PhosphorIconsStyle.fill)),
+    _NavPage('Lights', PhosphorIcons.lightbulb(PhosphorIconsStyle.light), PhosphorIcons.lightbulb(PhosphorIconsStyle.fill)),
+    _NavPage('Power', PhosphorIcons.plug(PhosphorIconsStyle.light), PhosphorIcons.plug(PhosphorIconsStyle.fill)),
+    _NavPage('Blinds', PhosphorIcons.slidersHorizontal(PhosphorIconsStyle.light), PhosphorIcons.slidersHorizontal(PhosphorIconsStyle.fill)),
+    _NavPage('Climate', PhosphorIcons.thermometerSimple(PhosphorIconsStyle.light), PhosphorIcons.thermometerSimple(PhosphorIconsStyle.fill)),
+    _NavPage('Security', PhosphorIcons.shieldCheck(PhosphorIconsStyle.light), PhosphorIcons.shieldCheck(PhosphorIconsStyle.fill)),
+    _NavPage('Energy', PhosphorIcons.lightning(PhosphorIconsStyle.light), PhosphorIcons.lightning(PhosphorIconsStyle.fill)),
+    _NavPage('Media', PhosphorIcons.musicNotes(PhosphorIconsStyle.light), PhosphorIcons.musicNotes(PhosphorIconsStyle.fill)),
+    _NavPage('Irrigation', PhosphorIcons.drop(PhosphorIconsStyle.light), PhosphorIcons.drop(PhosphorIconsStyle.fill)),
+    _NavPage('Settings', PhosphorIcons.gear(PhosphorIconsStyle.light), PhosphorIcons.gear(PhosphorIconsStyle.fill)),
   ];
 
   List<Widget> get _pageWidgets => [
@@ -109,7 +109,7 @@ class _AppShellState extends State<AppShell> {
                     child: Row(
                       children: [
                         // House emoji as logo
-                        const Text('🏠', style: TextStyle(fontSize: 28)),
+                        Icon(PhosphorIcons.house(PhosphorIconsStyle.fill), size: 26, color: SmithMkColors.gold),
                         const SizedBox(width: 10),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -166,7 +166,7 @@ class _AppShellState extends State<AppShell> {
         ),
         child: Row(
           children: [
-            Text(page.emoji, style: const TextStyle(fontSize: 18)),
+            Icon(isActive ? page.activeIcon : page.icon, size: 20, color: isActive ? SmithMkColors.accent : SmithMkColors.textSecondary),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -197,7 +197,7 @@ class _AppShellState extends State<AppShell> {
   Widget _buildBottomNavLayout() {
     // Show max 5 items in bottom nav — Home + 4 most used
     final bottomItems = [
-      _NavPage('Home', '🏠'),
+      _pages[0], // Home
       _pages[1], // Dashboard
       _pages[3], // Lights
       _pages[9], // Media
@@ -240,7 +240,7 @@ class _AppShellState extends State<AppShell> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(page.emoji, style: TextStyle(fontSize: isActive ? 20 : 17)),
+                        Icon(isActive ? page.activeIcon : page.icon, size: isActive ? 22 : 20, color: isActive ? SmithMkColors.accent : SmithMkColors.textTertiary),
                         const SizedBox(height: 2),
                         Text(page.label, style: TextStyle(
                           fontSize: 9,
@@ -262,6 +262,7 @@ class _AppShellState extends State<AppShell> {
 
 class _NavPage {
   final String label;
-  final String emoji;
-  const _NavPage(this.label, this.emoji);
+  final IconData icon;
+  final IconData activeIcon;
+  const _NavPage(this.label, this.icon, this.activeIcon);
 }

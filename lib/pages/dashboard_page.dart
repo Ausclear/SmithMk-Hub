@@ -5,9 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:syncfusion_flutter_gauges/gauges.dart';
 import '../theme/smithmk_theme.dart';
-
-// Icons8 3D Fluency base URL
-const _ic8 = 'https://img.icons8.com/3d-fluency/94/';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -239,7 +237,7 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
   // ─── WEATHER ───
   Widget _weatherCard() {
     return _glass(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [_sLabel('WEATHER'), const Spacer(), Image.network('${_ic8}sun.png', width: 30, height: 30, errorBuilder: (_, __, ___) => const Text('☀️', style: TextStyle(fontSize: 22)))]),
+      Row(children: [_sLabel('WEATHER'), const Spacer(), Icon(PhosphorIcons.sun(PhosphorIconsStyle.light), size: 24, color: SmithMkColors.textTertiary)]),
       const SizedBox(height: 10),
       Row(children: [
         const Text('☀️', style: TextStyle(fontSize: 36)),
@@ -268,7 +266,7 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
   Widget _scenesCard() {
     const scenes = [('Morning', '🌅', 0), ('Day', '☀️', 1), ('Evening', '🏠', 2), ('Night', '🌙', 3), ('Away', '🏖️', 4), ('Movie', '🎬', 5)];
     return _glass(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [_sLabel('SCENES'), const Spacer(), Image.network('${_ic8}clapperboard.png', width: 30, height: 30, errorBuilder: (_, __, ___) => const SizedBox())]),
+      Row(children: [_sLabel('SCENES'), const Spacer(), Icon(PhosphorIcons.filmSlate(PhosphorIconsStyle.light), size: 24, color: SmithMkColors.textTertiary)]),
       const SizedBox(height: 12),
       LayoutBuilder(builder: (ctx, c) {
         // Use grid if wide enough, otherwise scroll
@@ -395,32 +393,43 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
       crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
       childAspectRatio: 1.3, mainAxisSpacing: 1, crossAxisSpacing: 1,
       children: [
-        _statCell('SECURITY', '${_ic8}shield.png', 'Disarmed', '1 open · 10 zones', SmithMkColors.success),
-        _statCell('LIGHTS', '${_ic8}idea.png', '0/4', '0 rooms active', SmithMkColors.textPrimary),
-        _statCell('EV', '${_ic8}car.png', 'Disconnected', 'No EV plugged in', SmithMkColors.textPrimary),
-        _statCell('BLINDS', '${_ic8}curtains.png', 'All Closed', '3 blinds', SmithMkColors.textPrimary),
+        _statCell('SECURITY', PhosphorIcons.shieldCheck(PhosphorIconsStyle.light), 'Disarmed', '1 open · 10 zones', SmithMkColors.success, 0),
+        _statCell('LIGHTS', PhosphorIcons.lightbulb(PhosphorIconsStyle.light), '0/4', '0 rooms active', SmithMkColors.textPrimary, 2),
+        _statCell('EV', PhosphorIcons.car(PhosphorIconsStyle.light), 'Disconnected', 'No EV plugged in', SmithMkColors.textPrimary, -1),
+        _statCell('BLINDS', PhosphorIcons.slidersHorizontal(PhosphorIconsStyle.light), 'All Closed', '3 blinds', SmithMkColors.textPrimary, 4),
       ],
     ));
   }
 
-  Widget _statCell(String title, String iconUrl, String value, String sub, Color vCol) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.02), border: Border.all(color: Colors.white.withValues(alpha: 0.03))),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [_sLabel(title), const Spacer(), Image.network(iconUrl, width: 26, height: 26, errorBuilder: (_, __, ___) => const SizedBox())]),
-        const Spacer(),
-        Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: vCol)),
-        const SizedBox(height: 2),
-        Text(sub, style: const TextStyle(fontSize: 9, color: SmithMkColors.textTertiary)),
-      ]),
+  Widget _statCell(String title, IconData icon, String value, String sub, Color vCol, int pageIdx) {
+    return GestureDetector(
+      onTap: pageIdx >= 0 ? () { HapticFeedback.lightImpact(); _navigateToPage(pageIdx); } : null,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.02), border: Border.all(color: Colors.white.withValues(alpha: 0.03))),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [_sLabel(title), const Spacer(), Icon(icon, size: 22, color: SmithMkColors.textTertiary)]),
+          const Spacer(),
+          Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: vCol)),
+          const SizedBox(height: 2),
+          Row(children: [
+            Expanded(child: Text(sub, style: const TextStyle(fontSize: 9, color: SmithMkColors.textTertiary))),
+            if (pageIdx >= 0) const Text('→', style: TextStyle(fontSize: 12, color: SmithMkColors.textTertiary)),
+          ]),
+        ]),
+      ),
     );
+  }
+
+  void _navigateToPage(int pageIdx) {
+    // Signal to parent AppShell to switch page
+    // For now this is a placeholder — will wire up with callback/provider
   }
 
   // ─── ENERGY GAUGES ───
   Widget _energyCard() {
     return _glass(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [_sLabel('ENERGY'), const Spacer(), Image.network('${_ic8}lightning-bolt.png', width: 30, height: 30, errorBuilder: (_, __, ___) => const SizedBox())]),
+      Row(children: [_sLabel('ENERGY'), const Spacer(), Icon(PhosphorIcons.lightning(PhosphorIconsStyle.light), size: 24, color: SmithMkColors.textTertiary)]),
       const SizedBox(height: 14),
       Wrap(alignment: WrapAlignment.spaceEvenly, spacing: 6, runSpacing: 10, children: [
         _eGauge('Solar', 0, 5000, SmithMkColors.accent),
@@ -446,7 +455,7 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
   // ─── ROOMS ───
   Widget _roomsCard() {
     return _glass(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [_sLabel('ROOMS'), const Spacer(), Image.network('${_ic8}door.png', width: 30, height: 30, errorBuilder: (_, __, ___) => const SizedBox())]),
+      Row(children: [_sLabel('ROOMS'), const Spacer(), Icon(PhosphorIcons.door(PhosphorIconsStyle.light), size: 24, color: SmithMkColors.textTertiary)]),
       const SizedBox(height: 10),
       ..._roomData.map((r) => _roomRow(r.$1, r.$2, r.$3, r.$4)),
     ]));
@@ -495,7 +504,7 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
   // ─── IRRIGATION ───
   Widget _irrigationCard() {
     return _glass(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [_sLabel('IRRIGATION'), const Spacer(), Image.network('${_ic8}watering-can.png', width: 30, height: 30, errorBuilder: (_, __, ___) => const SizedBox())]),
+      Row(children: [_sLabel('IRRIGATION'), const Spacer(), Icon(PhosphorIcons.drop(PhosphorIconsStyle.light), size: 24, color: SmithMkColors.textTertiary)]),
       const SizedBox(height: 10),
       Row(children: [
         const Text('Schedule', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
@@ -528,7 +537,7 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
   Widget _activityCard() {
     const evts = [('💡', 'Entrance 2 → off', '11:28'), ('💡', 'Alfresco → off', '11:19'), ('💡', 'Entrance 2 → off', '11:16'), ('💡', 'Entrance 1 → off', '11:16'), ('💡', 'Alfresco → off', '11:14')];
     return _glass(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [_sLabel('ACTIVITY'), const Spacer(), Image.network('${_ic8}document.png', width: 30, height: 30, errorBuilder: (_, __, ___) => const SizedBox())]),
+      Row(children: [_sLabel('ACTIVITY'), const Spacer(), Icon(PhosphorIcons.listBullets(PhosphorIconsStyle.light), size: 24, color: SmithMkColors.textTertiary)]),
       const SizedBox(height: 10),
       ...evts.map((e) => Padding(padding: const EdgeInsets.only(bottom: 8), child: Row(children: [
         Container(width: 7, height: 7, decoration: BoxDecoration(color: SmithMkColors.accent, shape: BoxShape.circle, boxShadow: [BoxShadow(color: SmithMkColors.accent.withValues(alpha: 0.3), blurRadius: 4)])),
