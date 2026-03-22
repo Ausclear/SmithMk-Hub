@@ -23,10 +23,31 @@ class _DashboardPageState extends State<DashboardPage> {
   int _activeScene = 1; // Day
   final Map<String, double> _lightLevels = {'Master Bedroom': 0.0, 'Lounge': 0.0, 'Office': 0.0};
   String? _expandedRoom;
+  bool _drawerOpen = false;
+
+  // ALL available sections
+  static const List<_DashSection> _allSections = [
+    _DashSection('weather', 'Weather', '🌤️'),
+    _DashSection('scenes', 'Scenes', '🎬'),
+    _DashSection('climate', 'Climate', '🌡️'),
+    _DashSection('security', 'Security', '🛡️'),
+    _DashSection('lights', 'Lights', '💡'),
+    _DashSection('ev', 'EV Charger', '🔌'),
+    _DashSection('energy', 'Energy', '⚡'),
+    _DashSection('blinds', 'Blinds', '🪟'),
+    _DashSection('alarm', 'Alarm', '🚨'),
+    _DashSection('irrigation', 'Irrigation', '🌿'),
+    _DashSection('rooms', 'Rooms', '🚪'),
+    _DashSection('activity', 'Activity', '📋'),
+  ];
+
+  // Sections NOT on the dashboard (in the drawer)
+  List<String> get _drawerSections =>
+      _allSections.map((s) => s.key).where((k) => !_sectionOrder.contains(k)).toList();
 
   // Section order — long-press drag to reorder
   final List<String> _sectionOrder = [
-    'weather', 'scenes', 'climate', 'status', 'energy', 'rooms', 'activity',
+    'weather', 'scenes', 'climate', 'status', 'ev', 'energy', 'blinds', 'alarm', 'irrigation', 'rooms', 'activity',
   ];
 
   String get _greeting {
@@ -63,26 +84,149 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: SmithMkColors.background,
+      endDrawer: _buildWidgetDrawer(),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isWide = constraints.maxWidth >= 700;
-            return SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.all(isWide ? 24 : 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(),
-                  const SizedBox(height: 20),
-                  if (isWide)
-                    _buildTwoColumnLayout()
-                  else
-                    _buildSingleColumnLayout(),
-                ],
-              ),
+            return Stack(
+              children: [
+                SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: EdgeInsets.all(isWide ? 24 : 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeader(),
+                      const SizedBox(height: 20),
+                      if (isWide)
+                        _buildTwoColumnLayout()
+                      else
+                        _buildSingleColumnLayout(),
+                      const SizedBox(height: 60),
+                    ],
+                  ),
+                ),
+                // Floating edit button
+                Positioned(
+                  bottom: 16,
+                  right: 16,
+                  child: GestureDetector(
+                    onTap: () {
+                      HapticFeedback.mediumImpact();
+                      Scaffold.of(context).openEndDrawer();
+                    },
+                    child: Container(
+                      width: 48, height: 48,
+                      decoration: BoxDecoration(
+                        color: SmithMkColors.accent,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [BoxShadow(color: SmithMkColors.accent.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
+                      ),
+                      child: const Center(child: Text('✎', style: TextStyle(fontSize: 20, color: Color(0xFF121212)))),
+                    ),
+                  ),
+                ),
+              ],
             );
           },
+        ),
+      ),
+    );
+  }
+
+  // ─── WIDGET DRAWER — slide out, drag sections to/from dashboard ───
+  Widget _buildWidgetDrawer() {
+    return Drawer(
+      backgroundColor: SmithMkColors.cardSurface,
+      width: 260,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('WIDGETS', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: SmithMkColors.gold, letterSpacing: 2)),
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: const Text('Done', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: SmithMkColors.accent)),
+                  ),
+                ],
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Text('Tap to add/remove sections', style: TextStyle(fontSize: 10, color: SmithMkColors.textTertiary)),
+            ),
+            const SizedBox(height: 12),
+            // Active sections (on dashboard) — tap to remove
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text('ON DASHBOARD', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: SmithMkColors.textTertiary, letterSpacing: 1)),
+            ),
+            const SizedBox(height: 8),
+            ..._sectionOrder.map((key) {
+              final section = _allSections.firstWhere((s) => s.key == key);
+              return _buildDrawerItem(section, true);
+            }),
+            const SizedBox(height: 16),
+            // Available sections (not on dashboard) — tap to add
+            if (_drawerSections.isNotEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text('AVAILABLE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: SmithMkColors.textTertiary, letterSpacing: 1)),
+              ),
+              const SizedBox(height: 8),
+              ..._drawerSections.map((key) {
+                final section = _allSections.firstWhere((s) => s.key == key);
+                return _buildDrawerItem(section, false);
+              }),
+            ],
+            const Spacer(),
+            // Reorder hint
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('Long-press and drag to reorder sections on the dashboard', style: TextStyle(fontSize: 10, color: SmithMkColors.textTertiary)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem(_DashSection section, bool isActive) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setState(() {
+          if (isActive) {
+            _sectionOrder.remove(section.key);
+          } else {
+            _sectionOrder.add(section.key);
+          }
+        });
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: isActive ? SmithMkColors.accent.withValues(alpha: 0.06) : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            Text(section.emoji, style: const TextStyle(fontSize: 18)),
+            const SizedBox(width: 12),
+            Expanded(child: Text(section.label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: isActive ? SmithMkColors.textPrimary : SmithMkColors.textTertiary))),
+            Icon(
+              isActive ? Icons.remove_circle_outline : Icons.add_circle_outline,
+              size: 18,
+              color: isActive ? SmithMkColors.error : SmithMkColors.accent,
+            ),
+          ],
         ),
       ),
     );
@@ -130,11 +274,14 @@ class _DashboardPageState extends State<DashboardPage> {
         const SizedBox(width: 12),
         Expanded(child: _buildLightsCard()),
       ]);
-      case 'energy': return Row(children: [
-        Expanded(child: _buildEVCard()),
-        const SizedBox(width: 12),
-        Expanded(child: _buildEnergyCard()),
-      ]);
+      case 'ev': return _buildEVCard();
+      case 'energy': return _buildEnergyCard();
+      case 'blinds': return _buildBlindsCard();
+      case 'alarm': return _buildAlarmCard();
+      case 'irrigation': return _buildIrrigationCard();
+      case 'blinds': return _buildBlindsCard();
+      case 'alarm': return _buildAlarmCard();
+      case 'irrigation': return _buildIrrigationCard();
       case 'rooms': return _buildRoomsCard();
       case 'activity': return _buildActivityCard();
       default: return const SizedBox.shrink();
@@ -143,8 +290,8 @@ class _DashboardPageState extends State<DashboardPage> {
 
   // ─── TWO COLUMN LAYOUT (tablet/desktop) ───
   Widget _buildTwoColumnLayout() {
-    final leftKeys = _sectionOrder.where((k) => ['weather', 'climate', 'status', 'energy'].contains(k)).toList();
-    final rightKeys = _sectionOrder.where((k) => ['scenes', 'rooms', 'activity'].contains(k)).toList();
+    final leftKeys = _sectionOrder.where((k) => ['weather', 'climate', 'status', 'ev', 'energy', 'blinds'].contains(k)).toList();
+    final rightKeys = _sectionOrder.where((k) => ['scenes', 'alarm', 'irrigation', 'rooms', 'activity'].contains(k)).toList();
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -504,8 +651,10 @@ class _DashboardPageState extends State<DashboardPage> {
         children: [
           _sectionTitle('ENERGY'),
           const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+          Wrap(
+            alignment: WrapAlignment.spaceAround,
+            spacing: 8,
+            runSpacing: 8,
             children: [
               _buildEnergyGauge('Solar', 0, 5000, 'W', SmithMkColors.accent),
               _buildEnergyGauge('Battery', 0, 100, '%', const Color(0xFF4ADE80)),
@@ -856,6 +1005,61 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
+
+  // ─── BLINDS CARD ───
+  Widget _buildBlindsCard() {
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            _sectionTitle('BLINDS'),
+            const Text('🪟', style: TextStyle(fontSize: 20)),
+          ]),
+          const SizedBox(height: 8),
+          const Text('All Closed', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: SmithMkColors.textPrimary)),
+          const Text('3 blinds · 0 open', style: TextStyle(fontSize: 11, color: SmithMkColors.textTertiary)),
+        ],
+      ),
+    );
+  }
+
+  // ─── ALARM CARD ───
+  Widget _buildAlarmCard() {
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            _sectionTitle('ALARM'),
+            const Text('🚨', style: TextStyle(fontSize: 20)),
+          ]),
+          const SizedBox(height: 8),
+          const Text('Disarmed', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF4ADE80))),
+          const Text('Risco · 10 zones', style: TextStyle(fontSize: 11, color: SmithMkColors.textTertiary)),
+        ],
+      ),
+    );
+  }
+
+  // ─── IRRIGATION CARD ───
+  Widget _buildIrrigationCard() {
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            _sectionTitle('IRRIGATION'),
+            const Text('🌿', style: TextStyle(fontSize: 20)),
+          ]),
+          const SizedBox(height: 8),
+          const Text('Off', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: SmithMkColors.textTertiary)),
+          const Text('No schedule active', style: TextStyle(fontSize: 11, color: SmithMkColors.textTertiary)),
+        ],
+      ),
+    );
+  }
+
   // ─── ACTIVITY CARD ───
   Widget _buildActivityCard() {
     final events = [
@@ -924,6 +1128,13 @@ class _Room {
   final String name, emoji;
   final int lightsOn, lightsTotal;
   const _Room(this.name, this.emoji, this.lightsOn, this.lightsTotal);
+}
+
+class _DashSection {
+  final String key;
+  final String label;
+  final String emoji;
+  const _DashSection(this.key, this.label, this.emoji);
 }
 
 class _ActivityEvent {
