@@ -54,10 +54,8 @@ class _HomePageState extends State<HomePage> {
     return '${days[_now.weekday - 1]} ${_now.day} ${months[_now.month - 1]}';
   }
 
-  Widget _buildEmoji(String emoji, double size) { return Text(emoji, style: TextStyle(fontSize: size * 0.85)); }
-    if (animated != null) {
-    }
-    return Text(emoji, style: TextStyle(fontSize: size * 0.8));
+  Widget _buildEmoji(String emoji, double size) {
+    return Text(emoji, style: TextStyle(fontSize: size * 0.85));
   }
 
   @override
