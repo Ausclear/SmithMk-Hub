@@ -18,15 +18,15 @@ class _HomePageState extends State<HomePage> {
 
   // Animated Noto emojis — renders beautifully on web AND native
   final List<_HomeTile> _tiles = [
-    _HomeTile('Dashboard', AnimatedEmojis.barChart),
-    _HomeTile('Lights', AnimatedEmojis.lightBulb),
-    _HomeTile('Security', AnimatedEmojis.shield),
-    _HomeTile('Climate', AnimatedEmojis.thermometer),
-    _HomeTile('Blinds', AnimatedEmojis.windoww),
-    _HomeTile('Energy', AnimatedEmojis.highVoltage),
-    _HomeTile('Media', AnimatedEmojis.musicalNotes),
-    _HomeTile('Rooms', AnimatedEmojis.door),
-    _HomeTile('Settings', AnimatedEmojis.wrench),
+    _HomeTile('Dashboard', AnimatedEmojis.fromEmojiString('📊')!),
+    _HomeTile('Lights', AnimatedEmojis.fromEmojiString('💡')!),
+    _HomeTile('Security', AnimatedEmojis.fromEmojiString('🛡️')!),
+    _HomeTile('Climate', AnimatedEmojis.fromEmojiString('🌡️')!),
+    _HomeTile('Blinds', AnimatedEmojis.fromEmojiString('🪟')!),
+    _HomeTile('Energy', AnimatedEmojis.fromEmojiString('⚡')!),
+    _HomeTile('Media', AnimatedEmojis.fromEmojiString('🎵')!),
+    _HomeTile('Rooms', AnimatedEmojis.fromEmojiString('🚪')!),
+    _HomeTile('Settings', AnimatedEmojis.fromEmojiString('🔧')!),
   ];
 
   @override
