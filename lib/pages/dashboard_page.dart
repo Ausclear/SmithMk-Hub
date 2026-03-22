@@ -282,22 +282,15 @@ class _DashboardPageState extends State<DashboardPage> {
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: modeCol.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: modeCol.withValues(alpha: 0.3)),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(_heatingMode ? '🔥' : '❄️', style: const TextStyle(fontSize: 12)),
-                      const SizedBox(width: 4),
-                      Text(
-                        _heatingMode ? 'HEATING' : 'COOLING',
-                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: modeCol, letterSpacing: 1),
-                      ),
-                    ],
+                  child: Text(
+                    _heatingMode ? '🔥 HEAT' : '❄️ COOL',
+                    style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: modeCol),
                   ),
                 ),
               ),
