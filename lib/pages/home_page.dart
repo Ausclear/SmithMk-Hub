@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:animated_emoji/animated_emoji.dart';
 import '../theme/smithmk_theme.dart';
 
 class HomePage extends StatefulWidget {
@@ -16,16 +16,17 @@ class _HomePageState extends State<HomePage> {
   DateTime _now = DateTime.now();
   int? _selectedTile;
 
+  // Animated Noto emojis — renders beautifully on web AND native
   final List<_HomeTile> _tiles = [
-    _HomeTile('Dashboard', PhosphorIcons.chartBar(PhosphorIconsStyle.fill), SmithMkColors.accent),
-    _HomeTile('Lights', PhosphorIcons.lightbulbFilament(PhosphorIconsStyle.fill), SmithMkColors.accent),
-    _HomeTile('Security', PhosphorIcons.shieldCheck(PhosphorIconsStyle.fill), const Color(0xFFEF5350)),
-    _HomeTile('Climate', PhosphorIcons.thermometerSimple(PhosphorIconsStyle.fill), SmithMkColors.heatingMode),
-    _HomeTile('Blinds', PhosphorIcons.slidersHorizontal(PhosphorIconsStyle.fill), SmithMkColors.accent),
-    _HomeTile('Energy', PhosphorIcons.lightning(PhosphorIconsStyle.fill), SmithMkColors.accent),
-    _HomeTile('Media', PhosphorIcons.speakerHigh(PhosphorIconsStyle.fill), SmithMkColors.accent),
-    _HomeTile('Rooms', PhosphorIcons.door(PhosphorIconsStyle.fill), SmithMkColors.gold),
-    _HomeTile('Settings', PhosphorIcons.gear(PhosphorIconsStyle.fill), SmithMkColors.textSecondary),
+    _HomeTile('Dashboard', AnimatedEmojis.barChart),
+    _HomeTile('Lights', AnimatedEmojis.lightBulb),
+    _HomeTile('Security', AnimatedEmojis.shield),
+    _HomeTile('Climate', AnimatedEmojis.thermometer),
+    _HomeTile('Blinds', AnimatedEmojis.windoww),
+    _HomeTile('Energy', AnimatedEmojis.highVoltage),
+    _HomeTile('Media', AnimatedEmojis.musicalNotes),
+    _HomeTile('Rooms', AnimatedEmojis.door),
+    _HomeTile('Settings', AnimatedEmojis.wrench),
   ];
 
   @override
@@ -59,13 +60,8 @@ class _HomePageState extends State<HomePage> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final w = constraints.maxWidth;
-
-            // Three layouts:
-            // Phone (< 600px): centred 3-col grid, fills the screen
-            // Tablet (600-1000px): centred content, 3-col grid with bigger tiles
-            // Desktop (1000px+): two-panel — header/info left, tile grid right
-
-            if (w >= 1000) {
+            // Desktop gets two-panel when wide enough (side nav already takes 72px)
+            if (w >= 900) {
               return _buildDesktopLayout(constraints);
             } else {
               return _buildMobileLayout(constraints);
@@ -80,7 +76,7 @@ class _HomePageState extends State<HomePage> {
   Widget _buildMobileLayout(BoxConstraints constraints) {
     final w = constraints.maxWidth;
     final isTablet = w >= 600;
-    final pad = isTablet ? 32.0 : 20.0;
+    final pad = isTablet ? 28.0 : 20.0;
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: pad),
@@ -107,15 +103,15 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ─── DESKTOP LAYOUT ───
+  // ─── DESKTOP LAYOUT (two-panel) ───
   Widget _buildDesktopLayout(BoxConstraints constraints) {
     return Row(
       children: [
-        // Left panel — header, status, info
+        // Left panel
         SizedBox(
-          width: 340,
+          width: 320,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(32, 28, 24, 28),
+            padding: const EdgeInsets.fromLTRB(28, 28, 20, 28),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -148,15 +144,14 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ),
-        // Divider
         Container(width: 1, color: SmithMkColors.glassBorder),
         // Right panel — tile grid
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.all(32),
+            padding: const EdgeInsets.all(28),
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 600),
+                constraints: const BoxConstraints(maxWidth: 520),
                 child: _buildTileGrid(3),
               ),
             ),
@@ -269,8 +264,7 @@ class _HomePageState extends State<HomePage> {
   Widget _buildTile(int index, double tileSize) {
     final tile = _tiles[index];
     final isSelected = _selectedTile == index;
-    // Scale icon size relative to tile — bigger tile, bigger icon
-    final iconSize = (tileSize * 0.28).clamp(28.0, 48.0);
+    final emojiSize = (tileSize * 0.32).clamp(32.0, 56.0);
     final fontSize = (tileSize * 0.08).clamp(9.0, 12.0);
 
     return GestureDetector(
@@ -316,8 +310,13 @@ class _HomePageState extends State<HomePage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(tile.icon, size: iconSize, color: isSelected ? tile.color : tile.color.withValues(alpha: 0.65)),
-                  SizedBox(height: tileSize * 0.06),
+                  // Animated Noto emoji
+                  AnimatedEmoji(
+                    tile.emoji,
+                    size: emojiSize,
+                    repeat: true,
+                  ),
+                  SizedBox(height: tileSize * 0.05),
                   Text(
                     tile.name.toUpperCase(),
                     style: TextStyle(
@@ -375,7 +374,6 @@ class _HomePageState extends State<HomePage> {
 
 class _HomeTile {
   final String name;
-  final IconData icon;
-  final Color color;
-  const _HomeTile(this.name, this.icon, this.color);
+  final AnimatedEmojiData emoji;
+  const _HomeTile(this.name, this.emoji);
 }
