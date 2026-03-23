@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>SmithMk Music</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'DM Sans',sans-serif;background:#0a0a0d;color:#f0f0f0;min-height:100dvh;overflow-x:hidden}
+.wrap{max-width:520px;margin:0 auto;padding:16px 16px 100px}
+.sl{font-size:12px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,193,7,0.5);margin-bottom:12px;display:block}
+.card{background:linear-gradient(145deg,#1c1c1e,#1c1c1e);border:1px solid rgba(255,193,7,0.08);border-radius:18px;margin-bottom:14px;padding:16px 18px}
+
+/* Header */
+.hdr{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.hdr svg{width:22px;height:22px;stroke:#c4a96b;fill:none;stroke-width:14;stroke-linecap:round;stroke-linejoin:round}
+.hdr h1{font-size:18px;font-weight:600;flex:1}
+.pills{display:flex;gap:6px;margin-bottom:16px}
+.pill{display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);font-size:8px;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,0.4)}
+.pill .d{width:5px;height:5px;border-radius:50%}.pill .d.g{background:#4ADE80;box-shadow:0 0 6px rgba(74,222,128,0.5)}.pill .d.r{background:#F87171;box-shadow:0 0 6px rgba(248,113,113,0.5)}
+
+/* Device rows */
+.dev-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);cursor:pointer;margin-bottom:6px;transition:background 0.1s}
+.dev-row.sel{background:rgba(255,153,0,0.07);border-color:rgba(255,153,0,0.22)}
+.dev-row:active{transform:scale(0.98)}
+.dev-img{width:28px;height:28px;object-fit:contain;border-radius:6px;background:rgba(255,255,255,0.05);flex-shrink:0}
+.dev-name{font-size:13px;font-weight:600;color:rgba(255,255,255,0.6);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dev-row.sel .dev-name{color:rgba(255,255,255,0.92)}
+.dev-state{font-size:12px;color:rgba(255,255,255,0.2);margin-top:1px}
+.dev-playing{font-size:12px;color:rgba(255,153,0,0.75);margin-top:1px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.dev-play{width:32px;height:32px;border-radius:8px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.04s}
+.dev-play.idle{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1)}
+.dev-play.on{background:rgba(255,153,0,0.18);border:1px solid rgba(255,153,0,0.4)}
+
+/* Tabs */
+.tabs{display:flex;border-radius:12px;overflow:hidden;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);margin-bottom:18px}
+.tab{flex:1;padding:11px 0;cursor:pointer;font-weight:700;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;border:none;background:transparent;color:rgba(255,255,255,0.3);text-align:center;transition:background 0.15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.tab.active{background:rgba(255,193,7,0.10);color:#FFC107}
+.tab+.tab{border-left:1px solid rgba(255,255,255,0.07)}
+
+/* Service selector */
+.svcs{display:flex;gap:6px;margin-bottom:14px}
+.svc{flex:1;padding:10px 4px;border-radius:10px;cursor:pointer;font-size:12px;font-weight:700;text-align:center;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.3);transition:all 0.15s}
+.svc.spotify.active{background:rgba(29,185,84,0.14);border-color:rgba(29,185,84,0.4);color:#1DB954}
+.svc.amazon.active{background:rgba(255,153,0,0.14);border-color:rgba(255,153,0,0.4);color:#FF9900}
+.svc.tunein.active{background:rgba(0,180,216,0.14);border-color:rgba(0,180,216,0.4);color:#00B4D8}
+
+/* Search input */
+.search-wrap{position:relative;margin-bottom:12px}
+.search-wrap input{width:100%;padding:13px 14px 13px 38px;border-radius:12px;font-size:14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.9);outline:none;font-family:'DM Sans',sans-serif}
+.search-wrap input::placeholder{color:rgba(255,255,255,0.25)}
+.search-wrap input:focus{border-color:rgba(255,193,7,0.3)}
+.search-wrap .ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,0.25)}
+
+/* Result tabs */
+.rtabs{display:flex;gap:6px;margin-bottom:14px}
+.rtab{padding:7px 14px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);color:rgba(255,255,255,0.3);transition:all 0.15s}
+.rtab.active{background:rgba(255,193,7,0.1);border-color:rgba(255,193,7,0.3);color:#FFC107}
+
+/* Track rows */
+.row{display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);margin-bottom:6px;cursor:pointer}
+.row:active{background:rgba(255,255,255,0.06)}
+.row-art{width:42px;height:42px;object-fit:cover;border-radius:8px;flex-shrink:0;background:#1a1a1a}
+.row-info{flex:1;min-width:0}
+.row-title{font-size:13px;font-weight:600;color:rgba(255,255,255,0.88);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row-sub{font-size:12px;color:rgba(255,255,255,0.3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+.row-meta{font-size:12px;color:rgba(255,255,255,0.2);flex-shrink:0}
+.row-play{width:30px;height:30px;border-radius:50%;flex-shrink:0;cursor:pointer;background:rgba(29,185,84,0.12);border:1px solid rgba(29,185,84,0.3);display:flex;align-items:center;justify-content:center}
+.row-play:active{background:rgba(29,185,84,0.55);border-color:rgba(29,185,84,0.8)}
+.row-play svg{fill:#1DB954;stroke:none}
+
+/* Now playing */
+.np{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.np-art{width:64px;height:64px;border-radius:10px;flex-shrink:0;background:#111;object-fit:cover}
+.np-title{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.np-artist{font-size:12px;color:rgba(255,153,0,0.75);margin-top:2px}
+.np-device{font-size:10px;color:rgba(255,255,255,0.2);margin-top:4px}
+
+/* Progress */
+.prog{height:6px;border-radius:3px;background:rgba(255,255,255,0.08);overflow:hidden;margin-bottom:6px}
+.prog-fill{height:100%;background:#FF9900;border-radius:3px;transition:width 1s linear}
+.prog-times{display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,0.2);margin-bottom:14px;font-variant-numeric:tabular-nums}
+
+/* Controls */
+.controls{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:14px}
+.cbtn{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);color:rgba(255,255,255,0.6);font-size:14px;transition:background 0.04s;user-select:none}
+.cbtn:active{background:rgba(255,193,7,0.55);border-color:rgba(255,193,7,0.8);color:#fff;box-shadow:inset 0 3px 8px rgba(0,0,0,0.5)}
+.cbtn.play{width:50px;height:50px;background:rgba(255,153,0,0.12);border-color:rgba(255,153,0,0.35);color:#FF9900}
+.cbtn.play:active{background:rgba(255,153,0,0.55);color:#fff}
+.cbtn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.cbtn.play svg{width:20px;height:20px;fill:currentColor;stroke:none}
+
+/* Volume */
+.vol{display:flex;align-items:center;gap:10px}
+.vol svg{width:16px;height:16px;stroke:rgba(255,255,255,0.3);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.vol-track{flex:1;height:36px;position:relative;cursor:pointer;display:flex;align-items:center;touch-action:none}
+.vol-bg{position:absolute;left:0;right:0;height:4px;border-radius:2px;background:rgba(255,255,255,0.08)}
+.vol-fill{height:4px;border-radius:2px;background:#FF9900;position:absolute;left:0}
+.vol-thumb{position:absolute;width:16px;height:16px;border-radius:50%;background:#FF9900;box-shadow:0 0 8px rgba(255,153,0,0.3);border:2px solid rgba(255,255,255,0.2);transform:translateX(-50%);pointer-events:none}
+.vol-pct{font-size:12px;font-weight:600;color:rgba(255,255,255,0.25);min-width:32px;text-align:right}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="hdr">
+<svg viewBox="0 0 256 256"><path d="M24 160V128a104 104 0 01208 0v32"/><path d="M24 160v32a24 24 0 0024 24h8a16 16 0 0016-16v-32a16 16 0 00-16-16H24z"/><path d="M232 160v32a24 24 0 01-24 24h-8a16 16 0 01-16-16v-32a16 16 0 0116-16h32z"/></svg>
+<h1>Music</h1>
+</div>
+<div class="pills">
+<div class="pill"><div class="d g"></div>HA</div>
+<div class="pill"><div class="d g"></div>SUPABASE</div>
+<div class="pill"><div class="d g"></div>SPOTIFY</div>
+</div>
+
+<!-- DEVICES -->
+<div class="card">
+<span class="sl">Devices</span>
+<div id="devList"></div>
+</div>
+
+<!-- NOW PLAYING -->
+<div class="card" id="npCard">
+<span class="sl">Now Playing</span>
+<div class="np">
+<img class="np-art" id="npArt" src="" onerror="this.style.background='#111';this.src=''">
+<div style="flex:1;min-width:0">
+<div class="np-title" id="npTitle">Bohemian Rhapsody</div>
+<div class="np-artist" id="npArtist">Queen · A Night at the Opera</div>
+<div class="np-device" id="npDevice">🔊 Meals Echo</div>
+</div>
+</div>
+<div class="prog"><div class="prog-fill" id="progFill" style="width:35%"></div></div>
+<div class="prog-times"><span id="progPos">1:24</span><span id="progDur">3:55</span></div>
+<div class="controls">
+<div class="cbtn" title="Shuffle"><svg viewBox="0 0 24 24"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg></div>
+<div class="cbtn" title="Previous"><svg viewBox="0 0 24 24"><polygon points="19,20 9,12 19,4" fill="currentColor" stroke="none"/><line x1="5" y1="4" x2="5" y2="20" stroke-width="2"/></svg></div>
+<div class="cbtn play" title="Pause"><svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></div>
+<div class="cbtn" title="Stop"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" fill="currentColor" stroke="none"/></svg></div>
+<div class="cbtn" title="Next"><svg viewBox="0 0 24 24"><polygon points="5,4 15,12 5,20" fill="currentColor" stroke="none"/><line x1="19" y1="4" x2="19" y2="20" stroke-width="2"/></svg></div>
+</div>
+<div class="vol">
+<svg viewBox="0 0 24 24"><path d="M3 10v4h3l5 5V5L6 10z"/><path d="M16 9a4 4 0 010 6"/><path d="M19 5a9 9 0 010 14"/></svg>
+<div class="vol-track" id="volTrack"><div class="vol-bg"></div><div class="vol-fill" id="volFill" style="width:45%"></div><div class="vol-thumb" id="volThumb" style="left:45%"></div></div>
+<span class="vol-pct" id="volPct">45%</span>
+</div>
+</div>
+
+<!-- SEARCH -->
+<div class="card">
+<div class="tabs">
+<div class="tab active" data-tab="search"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Search</div>
+<div class="tab" data-tab="announce"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 000 20"/></svg> Announce</div>
+</div>
+<div class="svcs">
+<div class="svc spotify active" data-svc="spotify">Spotify</div>
+<div class="svc amazon" data-svc="amazon">Amazon</div>
+<div class="svc tunein" data-svc="tunein">TuneIn</div>
+</div>
+<div class="search-wrap">
+<div class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+<input type="text" placeholder="Search artists, songs, albums…" id="searchInput">
+</div>
+<div class="rtabs" id="rtabs" style="display:none">
+<div class="rtab active" data-rt="tracks">Tracks</div>
+<div class="rtab" data-rt="albums">Albums</div>
+<div class="rtab" data-rt="artists">Artists</div>
+<div class="rtab" data-rt="playlists">Playlists</div>
+</div>
+<div id="results"></div>
+</div>
+</div>
+
+<script>
+var DEVS=[
+{entity:'media_player.meals_echo',name:'Meals Echo',state:'playing',title:'Bohemian Rhapsody',artist:'Queen'},
+{entity:'media_player.mark_s_echo_dot',name:"Mark's Echo Dot",state:'idle'},
+{entity:'media_player.mark_s_echo_spot',name:"Mark's Echo Spot",state:'idle'},
+{entity:'media_player.guest_echo_show',name:'Guest Echo Show',state:'idle'},
+{entity:'media_player.lounge',name:'Lounge',state:'idle'},
+{entity:'media_player.kitchen',name:'Kitchen',state:'idle'},
+{entity:'media_player.patio_sonos',name:'Patio Sonos',state:'unavailable'},
+];
+var sel='media_player.meals_echo';
+function renderDevs(){var h='';DEVS.forEach(function(d){var s=d.entity===sel;var p=d.state==='playing';
+h+='<div class="dev-row'+(s?' sel':'')+'" onclick="sel=\''+d.entity+'\';renderDevs()">';
+h+='<div class="dev-img" style="display:flex;align-items:center;justify-content:center;font-size:16px">🔊</div>';
+h+='<div style="flex:1;min-width:0"><div class="dev-name">'+d.name+'</div>';
+if(p&&d.title)h+='<div class="dev-playing">'+d.title+(d.artist?' · '+d.artist:'')+'</div>';
+else h+='<div class="dev-state">'+d.state+'</div>';
+h+='</div>';
+h+='<div class="dev-play '+(p?'on':'idle')+'"><svg width="12" height="12" viewBox="0 0 24 24">'+(p?'<rect x="6" y="4" width="4" height="16" rx="1" fill="#FF9900"/><rect x="14" y="4" width="4" height="16" rx="1" fill="#FF9900"/>':'<polygon points="8,4 20,12 8,20" fill="rgba(255,255,255,0.5)"/>')+'</svg></div>';
+h+='</div>'});document.getElementById('devList').innerHTML=h}
+renderDevs();
+
+// Tabs
+document.querySelectorAll('.tab').forEach(function(t){t.onclick=function(){document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});t.classList.add('active')}});
+document.querySelectorAll('.svc').forEach(function(s){s.onclick=function(){document.querySelectorAll('.svc').forEach(function(x){x.classList.remove('active')});s.classList.add('active')}});
+document.querySelectorAll('.rtab').forEach(function(r){r.onclick=function(){document.querySelectorAll('.rtab').forEach(function(x){x.classList.remove('active')});r.classList.add('active')}});
+
+// Mock search
+var searchInput=document.getElementById('searchInput');
+searchInput.addEventListener('input',function(){
+var q=searchInput.value.trim();
+if(!q){document.getElementById('results').innerHTML='';document.getElementById('rtabs').style.display='none';return}
+document.getElementById('rtabs').style.display='flex';
+var mockTracks=[
+{name:'Bohemian Rhapsody',artist:'Queen',album:'A Night at the Opera',dur:'5:55'},
+{name:'We Will Rock You',artist:'Queen',album:'News of the World',dur:'2:02'},
+{name:'Don\'t Stop Me Now',artist:'Queen',album:'Jazz',dur:'3:29'},
+{name:'Somebody to Love',artist:'Queen',album:'A Day at the Races',dur:'4:56'},
+{name:'Under Pressure',artist:'Queen & David Bowie',album:'Hot Space',dur:'4:04'},
+];
+var h='';mockTracks.forEach(function(t){
+h+='<div class="row">';
+h+='<div class="row-art" style="display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg></div>';
+h+='<div class="row-info"><div class="row-title">'+t.name+'</div><div class="row-sub">'+t.artist+' · '+t.album+'</div></div>';
+h+='<span class="row-meta">'+t.dur+'</span>';
+h+='<div class="row-play"><svg width="11" height="11" viewBox="0 0 24 24"><polygon points="8,4 20,12 8,20"/></svg></div>';
+h+='</div>'});
+document.getElementById('results').innerHTML=h});
+
+// Volume drag
+var volTrack=document.getElementById('volTrack'),volFill=document.getElementById('volFill'),volThumb=document.getElementById('volThumb'),volPct=document.getElementById('volPct');
+var vDrag=false;
+function setVol(x){var r=volTrack.getBoundingClientRect();var p=Math.max(0,Math.min(100,((x-r.left)/r.width)*100));volFill.style.width=p+'%';volThumb.style.left=p+'%';volPct.textContent=Math.round(p)+'%'}
+volTrack.addEventListener('pointerdown',function(e){e.currentTarget.setPointerCapture(e.pointerId);vDrag=true;setVol(e.clientX)});
+volTrack.addEventListener('pointermove',function(e){if(vDrag)setVol(e.clientX)});
+volTrack.addEventListener('pointerup',function(){vDrag=false});
+volTrack.addEventListener('pointercancel',function(){vDrag=false});
+</script>
+</body>
+</html>
