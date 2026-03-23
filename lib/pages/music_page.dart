@@ -158,7 +158,9 @@ class _MusicPageState extends State<MusicPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0D),
-      body: SafeArea(child: Column(children: [
+      body: SafeArea(child: Center(child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520),
+        child: Column(children: [
         // Header
         Padding(padding: const EdgeInsets.fromLTRB(20, 16, 20, 0), child: Row(children: [
           Icon(PhosphorIcons.headphones(PhosphorIconsStyle.light), size: 22, color: SmithMkColors.gold),
@@ -264,7 +266,7 @@ class _MusicPageState extends State<MusicPage> {
           ), // close search card Container
           const SizedBox(height: 80),
         ]))),
-      ])),
+      ])))),
     );
   }
 
