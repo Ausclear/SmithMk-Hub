@@ -494,7 +494,7 @@ cv.addEventListener('pointercancel',function(){drag=false;});
 function thermoP(e){var rect=cv.getBoundingClientRect(),W=200;var mx=(e.clientX-rect.left)/rect.width*W,my=(e.clientY-rect.top)/rect.height*W;var deg=Math.atan2(my-W/2,mx-W/2)*180/Math.PI;if(deg<0)deg+=360;var arc=deg-135;if(arc<0)arc+=360;if(arc>270){arc=arc>315?0:270;}nestTarget=Math.round((12+arc/270*18)*2)/2;nestTarget=Math.max(12,Math.min(30,nestTarget));updateNest();}
 document.getElementById('tdn').onclick=function(){nestTarget=Math.max(12,nestTarget-0.5);updateNest();};
 document.getElementById('tup').onclick=function(){nestTarget=Math.min(30,nestTarget+0.5);updateNest();};
-document.getElementById('pbtn').onclick=function(){nestOn=!nestOn;this.className='pwr3d '+(nestOn?'on':'');updateNest();};
+document.getElementById('pbtn').onclick=function(){nestOn=!nestOn;this.className='pwr3d '+(nestOn?'on':'');if(!nestOn){rads.forEach(function(r){r.heating=false;r._prevMode=r.mode;r.mode='off';});}else{rads.forEach(function(r){r.mode=r._prevMode||'auto';r.heating=r.cur<r.tgt&&r.mode!=='off';});}updateNest();renderRads();if(activeRad!==null)updateSheet();};
 
 drawThermo();
 renderRads();
