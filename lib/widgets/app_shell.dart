@@ -6,6 +6,7 @@ import '../pages/dashboard_page.dart';
 import '../pages/lighting_page.dart';
 import '../pages/placeholder_page.dart';
 import '../pages/rooms_page.dart';
+import '../pages/music_page.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class AppShell extends StatefulWidget {
@@ -42,7 +43,7 @@ class _AppShellState extends State<AppShell> {
     PlaceholderPage(title: 'Climate', icon: PhosphorIcons.thermometerSimple(PhosphorIconsStyle.light)),
     PlaceholderPage(title: 'Security', icon: PhosphorIcons.shieldCheck(PhosphorIconsStyle.light)),
     PlaceholderPage(title: 'Energy', icon: PhosphorIcons.lightning(PhosphorIconsStyle.light)),
-    PlaceholderPage(title: 'Media', icon: PhosphorIcons.musicNotes(PhosphorIconsStyle.light)),
+    const MusicPage(), // Media → Music page (TV page separate later)
     PlaceholderPage(title: 'Irrigation', icon: PhosphorIcons.drop(PhosphorIconsStyle.light)),
     PlaceholderPage(title: 'Settings', icon: PhosphorIcons.gear(PhosphorIconsStyle.light)),
   ];
