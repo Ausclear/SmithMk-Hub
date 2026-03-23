@@ -111,40 +111,23 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
 
   Widget _sLabel(String t) => Text(t, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: SmithMkColors.textTertiary, letterSpacing: 1.5));
 
-  Widget _buildWideGrid(bool landscape) => _buildReorderableGrid(true);
-  Widget _buildNarrowGrid() => _buildReorderableGrid(false);
-
-  Widget _buildReorderableGrid(bool wide) {
-    if (!wide) {
-      // Single column — straightforward reorderable list
-      return ReorderableListView(
-        shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-        proxyDecorator: (child, i, a) => Material(color: Colors.transparent, elevation: 0,
-          child: ScaleTransition(scale: Tween(begin: 1.0, end: 1.03).animate(a), child: child)),
-        onReorder: (o, n) {
-          HapticFeedback.mediumImpact();
-          setState(() { if (n > o) n--; final item = _sections.removeAt(o); _sections.insert(n, item); });
-        },
-        children: [
-          for (int i = 0; i < _sections.length; i++)
-            Padding(
-              key: ValueKey(_sections[i]),
-              padding: const EdgeInsets.only(bottom: 16),
-              child: TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: Duration(milliseconds: 350 + i * 60),
-                curve: Curves.easeOutCubic,
-                builder: (_, v, child) => Transform.translate(offset: Offset(0, 20 * (1 - v)), child: Opacity(opacity: v, child: child)),
-                child: _buildSection(_sections[i]),
-              ),
-            ),
-        ],
-      );
+  Widget _buildWideGrid(bool landscape) {
+    // Split sections into two columns
+    final left = <String>[];
+    final right = <String>[];
+    for (int i = 0; i < _sections.length; i++) {
+      (i.isEven ? left : right).add(_sections[i]);
     }
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Expanded(child: _buildReorderCol(left, true)),
+      const SizedBox(width: 16),
+      Expanded(child: _buildReorderCol(right, false)),
+    ]);
+  }
 
-    // Wide — two column reorderable. Each row is a pair of cards.
-    // We pair sections into rows of 2 for the reorderable list.
-    final rowCount = (_sections.length / 2).ceil();
+  Widget _buildNarrowGrid() => _buildReorderCol(_sections, null);
+
+  Widget _buildReorderCol(List<String> keys, bool? isLeft) {
     return ReorderableListView(
       shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
       proxyDecorator: (child, i, a) => Material(color: Colors.transparent, elevation: 0,
@@ -153,32 +136,38 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
         HapticFeedback.mediumImpact();
         setState(() {
           if (n > o) n--;
-          // Reorder pairs — swap the two sections that make up each row
-          final oStart = o * 2;
-          final nStart = n * 2;
-          final pair = _sections.sublist(oStart, min(oStart + 2, _sections.length));
-          // Remove old pair
-          for (var i = 0; i < pair.length; i++) _sections.removeAt(oStart);
-          // Insert at new position
-          final insertAt = nStart > oStart ? nStart - pair.length : nStart;
-          for (var i = pair.length - 1; i >= 0; i--) _sections.insert(insertAt, pair[i]);
+          final item = keys.removeAt(o);
+          keys.insert(n, item);
+          // Rebuild _sections from both columns
+          if (isLeft != null) {
+            final other = <String>[];
+            for (final s in _sections) {
+              if (!keys.contains(s)) other.add(s);
+            }
+            _sections.clear();
+            for (int i = 0; i < max(keys.length, other.length); i++) {
+              if (isLeft!) {
+                if (i < keys.length) _sections.add(keys[i]);
+                if (i < other.length) _sections.add(other[i]);
+              } else {
+                if (i < other.length) _sections.add(other[i]);
+                if (i < keys.length) _sections.add(keys[i]);
+              }
+            }
+          }
         });
       },
       children: [
-        for (int r = 0; r < rowCount; r++)
+        for (int i = 0; i < keys.length; i++)
           Padding(
-            key: ValueKey('row_${_sections[r * 2]}'),
+            key: ValueKey(keys[i]),
             padding: const EdgeInsets.only(bottom: 16),
             child: TweenAnimationBuilder<double>(
               tween: Tween(begin: 0.0, end: 1.0),
-              duration: Duration(milliseconds: 350 + r * 80),
+              duration: Duration(milliseconds: 350 + i * 60),
               curve: Curves.easeOutCubic,
               builder: (_, v, child) => Transform.translate(offset: Offset(0, 20 * (1 - v)), child: Opacity(opacity: v, child: child)),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Expanded(child: _buildSection(_sections[r * 2])),
-                const SizedBox(width: 16),
-                Expanded(child: r * 2 + 1 < _sections.length ? _buildSection(_sections[r * 2 + 1]) : const SizedBox.shrink()),
-              ]),
+              child: _buildSection(keys[i]),
             ),
           ),
       ],
@@ -301,7 +290,7 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
 
   Widget _statusCards() => _nCard(padding: const EdgeInsets.all(12), child: GridView.count(
     crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-    childAspectRatio: 1.15, mainAxisSpacing: 12, crossAxisSpacing: 12, children: [
+    childAspectRatio: 1.6, mainAxisSpacing: 10, crossAxisSpacing: 10, children: [
       _statCell('SECURITY', PhosphorIcons.shieldCheck(PhosphorIconsStyle.light), 'Disarmed', '1 open · 10 zones', SmithMkColors.success),
       _statCell('LIGHTS', PhosphorIcons.lightbulb(PhosphorIconsStyle.light), '0/4', '0 rooms active', SmithMkColors.textPrimary),
       _statCell('EV', PhosphorIcons.car(PhosphorIconsStyle.light), 'Disconnected', 'No EV plugged in', SmithMkColors.textPrimary),
