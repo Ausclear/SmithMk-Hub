@@ -11,7 +11,7 @@ class HAService {
 
   // Direct HA — used when on local network
   static const haUrl = 'http://202.62.130.27:8123';
-  static const haToken = String.fromEnvironment('HA_TOKEN', defaultValue: '');
+  static const _haToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIwOWI5OTlmY2JmMWY0OWQwYTFiYzBiMmM1M2NiZTgyMiIsImlhdCI6MTc3MzExOTk5OSwiZXhwIjoyMDg4NDc5OTk5fQ.0HfaVvG4_Ld5xuxzejS5sWxi5jRGREkNrPXN3s-uM0k';
 
   // Supabase for config lookup
   static const _sbUrl = 'https://qraxdkzmteogkbfatvir.supabase.co';
@@ -39,14 +39,14 @@ class HAService {
         final urlRow = rows.firstWhere((r) => r['id'] == 'system:ha_url', orElse: () => null);
         final tokenRow = rows.firstWhere((r) => r['id'] == 'system:ha_token', orElse: () => null);
         _cachedHaUrl = (urlRow?['label'] as String?)?.isNotEmpty == true ? urlRow['label'] : haUrl;
-        _cachedHaToken = (tokenRow?['label'] as String?)?.isNotEmpty == true ? tokenRow['label'] : haToken;
+        _cachedHaToken = (tokenRow?['label'] as String?)?.isNotEmpty == true ? tokenRow['label'] : _haToken;
       } else {
         _cachedHaUrl = haUrl;
-        _cachedHaToken = haToken;
+        _cachedHaToken = _haToken;
       }
     } catch (_) {
       _cachedHaUrl = haUrl;
-      _cachedHaToken = haToken;
+      _cachedHaToken = _haToken;
     }
     _cacheTime = DateTime.now();
     return (url: _cachedHaUrl!, token: _cachedHaToken!);
