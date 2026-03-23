@@ -3,8 +3,9 @@ import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../theme/smithmk_theme.dart';
+
+const _iconBase = 'https://smarthome-eight-livid.vercel.app/icons/';
 
 class HomePage extends StatefulWidget {
   final void Function(String tileName) onTileTap;
@@ -18,15 +19,15 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   DateTime _now = DateTime.now();
 
   static const _tiles = [
-    _Tile('Media', PhosphorIconsBold.musicNotes, 'Not playing'),
-    _Tile('Rooms', PhosphorIconsBold.door, 'Loading…'),
-    _Tile('Energy', PhosphorIconsBold.lightning, 'Loading…'),
-    _Tile('Dashboard', PhosphorIconsBold.squaresFour, 'Overview'),
-    _Tile('Lights', PhosphorIconsBold.lightbulb, 'Loading…'),
-    _Tile('Security', PhosphorIconsBold.shieldCheck, 'Loading…'),
-    _Tile('Blinds', PhosphorIconsBold.slidersHorizontal, 'Loading…'),
-    _Tile('Climate', PhosphorIconsBold.thermometerSimple, 'Loading…'),
-    _Tile('Irrigation', PhosphorIconsBold.drop, 'Loading…'),
+    _Tile('Media', '${_iconBase}media.png', 'Not playing'),
+    _Tile('Rooms', '${_iconBase}rooms.png', 'Loading…'),
+    _Tile('Energy', '${_iconBase}energy.png', 'Loading…'),
+    _Tile('Dashboard', '${_iconBase}dashboard.png', 'Overview'),
+    _Tile('Lights', '${_iconBase}lighting.png', 'Loading…'),
+    _Tile('Security', '${_iconBase}security.png', 'Loading…'),
+    _Tile('Blinds', '${_iconBase}blinds.png', 'Loading…'),
+    _Tile('Climate', '${_iconBase}climate.png', 'Loading…'),
+    _Tile('Irrigation', '${_iconBase}energy_solar.png', 'Loading…'),
   ];
   static const _count = 9;
   static const _tileW = 110.0;
@@ -35,9 +36,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
   double _offset = 3 * _step; // Start on Dashboard (index 3)
   int _activeIdx = 3;
-  bool _dragging = false;
-  double _startX = 0, _startOff = 0, _lastX = 0, _vel = 0;
-  int _lastT = 0;
+  double _startOff = 0;
+  double _vel = 0;
   bool _didDrag = false;
   AnimationController? _snapCtrl;
   double _snapFrom = 0, _snapTo = 0;
@@ -71,46 +71,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   }
 
   void _snapToNearest(double vel) {
-    final projected = _offset + vel * 80;
+    final projected = _offset + vel * 120;
     final nearest = (_step * (projected / _step).roundToDouble());
     _snapFrom = _offset;
     _snapTo = nearest;
     _snapCtrl!.forward(from: 0);
-  }
-
-  void _onPointerDown(PointerDownEvent e) {
-    _snapCtrl?.stop();
-    _dragging = true;
-    _didDrag = false;
-    _startX = e.position.dx;
-    _startOff = _offset;
-    _lastX = e.position.dx;
-    _lastT = e.timeStamp.inMilliseconds;
-    _vel = 0;
-  }
-
-  void _onPointerMove(PointerMoveEvent e) {
-    if (!_dragging) return;
-    final dx = e.position.dx - _startX;
-    if (dx.abs() > 4) _didDrag = true;
-    setState(() => _offset = _startOff - dx);
-    final now = e.timeStamp.inMilliseconds;
-    final dt = now - _lastT;
-    if (dt > 0) _vel = (_lastX - e.position.dx) / dt;
-    _lastX = e.position.dx;
-    _lastT = now;
-  }
-
-  void _onPointerUp(PointerUpEvent e) {
-    if (!_dragging) return;
-    _dragging = false;
-    if (!_didDrag) {
-      final idx = ((_offset / _step).round() % _count + _count) % _count;
-      HapticFeedback.mediumImpact();
-      widget.onTileTap(_tiles[idx].label);
-      return;
-    }
-    _snapToNearest(_vel);
   }
 
   @override
@@ -145,13 +110,32 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
           // Carousel
           Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Listener(
-              onPointerDown: _onPointerDown,
-              onPointerMove: _onPointerMove,
-              onPointerUp: _onPointerUp,
-              child: SizedBox(height: 160, width: double.infinity, child: Stack(clipBehavior: Clip.none, children: [
-                ..._buildTiles(),
-              ])),
+            GestureDetector(
+              onHorizontalDragStart: (d) {
+                _snapCtrl?.stop();
+                _startOff = _offset;
+                _didDrag = false;
+                _vel = 0;
+              },
+              onHorizontalDragUpdate: (d) {
+                _didDrag = true;
+                setState(() => _offset = _startOff - d.localPosition.dx + d.localPosition.dx - d.delta.dx + _offset.sign * 0);
+                // Simpler: just subtract delta
+                setState(() => _offset -= d.delta.dx);
+                _vel = -d.delta.dx / 16; // approximate velocity
+              },
+              onHorizontalDragEnd: (d) {
+                final v = -d.velocity.pixelsPerSecond.dx / 1000;
+                _snapToNearest(v);
+              },
+              onTap: () {
+                final idx = ((_offset / _step).round() % _count + _count) % _count;
+                HapticFeedback.mediumImpact();
+                widget.onTileTap(_tiles[idx].label);
+              },
+              child: SizedBox(height: 160, width: double.infinity, child: LayoutBuilder(builder: (ctx, c) {
+                return Stack(clipBehavior: Clip.none, children: _buildTiles(c.maxWidth));
+              })),
             ),
             const SizedBox(height: 20),
             // Active label
@@ -172,35 +156,35 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     );
   }
 
-  List<Widget> _buildTiles() {
+  List<Widget> _buildTiles(double screenW) {
     final centreIdx = (_offset / _step).round();
     const range = 5;
     final tiles = <Widget>[];
-    final screenW = MediaQuery.of(context).size.width;
 
     for (var i = centreIdx - range; i <= centreIdx + range; i++) {
       final realIdx = ((i % _count) + _count) % _count;
       final tile = _tiles[realIdx];
-      final dist = i - centreIdx;
-      final tileOff = i * _step - _offset;
-      final scale = max(0.6, 1.0 - dist.abs() * 0.12);
-      final opacity = max(0.15, 1.0 - dist.abs() * 0.22);
-      final isActive = dist == 0;
+      final dist = (i * _step - _offset) / _step; // fractional distance from centre
+      final absDist = dist.abs();
+      final scale = max(0.6, 1.0 - absDist * 0.12);
+      final opacity = max(0.15, 1.0 - absDist * 0.22);
+      final isActive = absDist < 0.5;
 
-      // 3D pop — active tile lifts up and has perspective tilt
-      final yShift = isActive ? -12.0 : 0.0;
+      // 3D pop — active tile lifts up
+      final yShift = isActive ? -14.0 * (1.0 - absDist * 2) : 0.0;
+      final tileOff = i * _step - _offset;
 
       tiles.add(Positioned(
         left: screenW / 2 + tileOff - _tileW / 2,
-        top: 20 + yShift,
+        top: 20 + yShift.clamp(-14.0, 0.0),
         child: Transform.scale(scale: scale, child: Opacity(opacity: opacity,
-          child: _tileWidget(tile, isActive))),
+          child: _tileWidget(tile, isActive, absDist))),
       ));
     }
     return tiles;
   }
 
-  Widget _tileWidget(_Tile tile, bool isActive) {
+  Widget _tileWidget(_Tile tile, bool isActive, double absDist) {
     return Container(
       width: _tileW - 10, height: _tileW - 10,
       decoration: BoxDecoration(
@@ -209,42 +193,41 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           colors: [Color(0x1AFFFFFF), Color(0x08FFFFFF), Color(0x12FFFFFF)]),
         border: Border.all(color: isActive ? const Color(0x61FFB84D) : const Color(0x1AFFFFFF)),
         boxShadow: [
-          // 3D raised shadow
-          const BoxShadow(color: Color(0x26FFFFFF), blurRadius: 0, offset: Offset(0, -1)), // top inset highlight
-          const BoxShadow(color: Color(0x80000000), blurRadius: 0, offset: Offset(0, 2)),  // bottom shadow
+          const BoxShadow(color: Color(0x26FFFFFF), blurRadius: 0, offset: Offset(0, -1)),
+          const BoxShadow(color: Color(0x80000000), blurRadius: 0, offset: Offset(0, 2)),
           BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 40, offset: const Offset(0, 20)),
           BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 8, offset: const Offset(0, 4)),
-          // Active glow
           if (isActive) BoxShadow(color: const Color(0xFFFFB84D).withValues(alpha: 0.25), blurRadius: 30),
         ],
       ),
-      child: Stack(children: [
-        // Top edge
-        Positioned(top: 0, left: 0, right: 0, height: 1, child: Container(
-          decoration: BoxDecoration(borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-            color: Colors.white.withValues(alpha: 0.22)))),
-        // Bottom edge
-        Positioned(bottom: 0, left: 0, right: 0, height: 2, child: Container(
-          decoration: BoxDecoration(borderRadius: const BorderRadius.vertical(bottom: Radius.circular(14)),
-            color: Colors.black.withValues(alpha: 0.4)))),
-        // Glow overlay for active
-        if (isActive) Positioned.fill(child: Container(
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(14),
-            gradient: const RadialGradient(center: Alignment(0, -0.6), radius: 0.9,
-              colors: [Color(0x28FFB84D), Colors.transparent])))),
-        // Active indicator bar
-        if (isActive) Positioned(bottom: 6, left: 0, right: 0, child: Center(child: Container(
-          width: 20, height: 2, decoration: BoxDecoration(borderRadius: BorderRadius.circular(1),
-            color: const Color(0xFFFFB84D), boxShadow: [BoxShadow(color: const Color(0xFFFFB84D).withValues(alpha: 0.6), blurRadius: 8)])))),
-        // Icon + label
-        Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(tile.icon, size: 36, color: isActive ? const Color(0xFFFFB84D) : const Color(0x73FFFFFF),
-            shadows: isActive ? [Shadow(color: const Color(0xFFFFB84D).withValues(alpha: 0.6), blurRadius: 12)] : null),
-          const SizedBox(height: 6),
-          Text(tile.label.toUpperCase(), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1,
-            color: isActive ? const Color(0xFFFFB84D) : const Color(0x47FFFFFF))),
-        ])),
-      ]),
+      child: ClipRRect(borderRadius: BorderRadius.circular(14), child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Stack(children: [
+          // Top edge highlight
+          Positioned(top: 0, left: 0, right: 0, height: 1, child: Container(color: Colors.white.withValues(alpha: 0.22))),
+          // Bottom edge shadow
+          Positioned(bottom: 0, left: 0, right: 0, height: 2, child: Container(color: Colors.black.withValues(alpha: 0.4))),
+          // Glow for active
+          if (isActive) Positioned.fill(child: Container(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(center: const Alignment(0, -0.6), radius: 0.9,
+                colors: [Color.lerp(const Color(0xFFFFB84D), Colors.transparent, 0.75)!, Colors.transparent])))),
+          // Active indicator bar
+          if (isActive) Positioned(bottom: 6, left: 0, right: 0, child: Center(child: Container(
+            width: 20, height: 2, decoration: BoxDecoration(borderRadius: BorderRadius.circular(1),
+              color: const Color(0xFFFFB84D), boxShadow: [BoxShadow(color: const Color(0xFFFFB84D).withValues(alpha: 0.6), blurRadius: 8)])))),
+          // Icon + label
+          Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Image.network(tile.iconUrl, width: 40, height: 40, fit: BoxFit.contain,
+              color: isActive ? null : const Color(0x99FFFFFF),
+              colorBlendMode: isActive ? null : BlendMode.modulate,
+              errorBuilder: (_, __, ___) => Icon(Icons.home, size: 40, color: isActive ? const Color(0xFFFFB84D) : const Color(0x73FFFFFF))),
+            const SizedBox(height: 6),
+            Text(tile.label.toUpperCase(), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1,
+              color: isActive ? const Color(0xFFFFB84D) : const Color(0x47FFFFFF))),
+          ])),
+        ]),
+      )),
     );
   }
 
@@ -264,7 +247,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
 class _Tile {
   final String label;
-  final IconData icon;
+  final String iconUrl;
   final String summary;
-  const _Tile(this.label, this.icon, this.summary);
+  const _Tile(this.label, this.iconUrl, this.summary);
 }
