@@ -109,8 +109,36 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           ])),
 
           // Carousel
-          Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Expanded(child: Focus(
+            autofocus: true,
+            onKeyEvent: (node, event) {
+              if (event is! KeyDownEvent && event is! KeyRepeatEvent) return KeyEventResult.ignored;
+              if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                HapticFeedback.selectionClick();
+                _snapCtrl?.stop();
+                _snapFrom = _offset;
+                _snapTo = (_offset / _step).round() * _step - _step;
+                _snapCtrl!.forward(from: 0);
+                return KeyEventResult.handled;
+              }
+              if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                HapticFeedback.selectionClick();
+                _snapCtrl?.stop();
+                _snapFrom = _offset;
+                _snapTo = (_offset / _step).round() * _step + _step;
+                _snapCtrl!.forward(from: 0);
+                return KeyEventResult.handled;
+              }
+              if (event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.space) {
+                HapticFeedback.mediumImpact();
+                widget.onTileTap(_tiles[_activeIdx].label);
+                return KeyEventResult.handled;
+              }
+              return KeyEventResult.ignored;
+            },
+            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
             GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onHorizontalDragStart: (d) {
                 _snapCtrl?.stop();
                 _startOff = _offset;
@@ -119,19 +147,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               },
               onHorizontalDragUpdate: (d) {
                 _didDrag = true;
-                setState(() => _offset = _startOff - d.localPosition.dx + d.localPosition.dx - d.delta.dx + _offset.sign * 0);
-                // Simpler: just subtract delta
                 setState(() => _offset -= d.delta.dx);
-                _vel = -d.delta.dx / 16; // approximate velocity
               },
               onHorizontalDragEnd: (d) {
-                final v = -d.velocity.pixelsPerSecond.dx / 1000;
-                _snapToNearest(v);
+                _snapToNearest(-d.velocity.pixelsPerSecond.dx / 1000);
               },
               onTap: () {
-                final idx = ((_offset / _step).round() % _count + _count) % _count;
                 HapticFeedback.mediumImpact();
-                widget.onTileTap(_tiles[idx].label);
+                widget.onTileTap(_tiles[_activeIdx].label);
               },
               child: SizedBox(height: 160, width: double.infinity, child: LayoutBuilder(builder: (ctx, c) {
                 return Stack(clipBehavior: Clip.none, children: _buildTiles(c.maxWidth));
@@ -150,7 +173,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             Text(_tiles[_activeIdx].summary, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: SmithMkColors.accent, letterSpacing: 0.5)),
             const SizedBox(height: 4),
             const Text('TAP TO OPEN', style: TextStyle(fontSize: 10, color: Color(0x26FFFFFF), letterSpacing: 1)),
-          ])),
+          ]))),
         ]),
       ),
     );
