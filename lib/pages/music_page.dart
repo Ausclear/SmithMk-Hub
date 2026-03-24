@@ -221,17 +221,15 @@ class _MusicPageState extends State<MusicPage> {
       HAService.mediaPrev(_selectedEcho);
     }
   }
-  void _vol(double v) {
-    // Optimistic UI update immediately
-    setState(() {
-      _deviceAttrs[_selectedEcho] = {..._deviceAttrs[_selectedEcho] ?? {}, 'volume_level': v};
-      _deviceAttrs['media_player.spotify_smithmk'] = {..._deviceAttrs['media_player.spotify_smithmk'] ?? {}, 'volume_level': v};
-    });
-    // Send to both echo and spotify
+  double? _localVol; // Local vol while dragging — null means use HA value
+
+  void _volChanged(double v) {
+    setState(() => _localVol = v);
+  }
+  void _volCommit(double v) {
+    setState(() => _localVol = null);
+    // Only target the Echo entity — volume on the device, not spotify
     HAService.mediaVolume(_selectedEcho, v);
-    if (_spotifyState == 'playing' || _spotifyState == 'paused') {
-      HAService.mediaVolume('media_player.spotify_smithmk', v);
-    }
   }
 
   String get _selState => _deviceStates[_selectedEcho] ?? 'idle';
@@ -369,9 +367,12 @@ class _MusicPageState extends State<MusicPage> {
                   data: SliderThemeData(trackHeight: 4, thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
                     activeTrackColor: const Color(0xFFFF9900), inactiveTrackColor: const Color(0x14FFFFFF),
                     thumbColor: const Color(0xFFFF9900), overlayColor: const Color(0x1AFF9900)),
-                  child: Slider(value: _nowVol.clamp(0.0, 1.0), onChanged: (v) { setState(() {}); _vol(v); }))),
+                  child: Slider(
+                    value: (_localVol ?? _nowVol).clamp(0.0, 1.0),
+                    onChanged: _volChanged,
+                    onChangeEnd: _volCommit))),
                 const SizedBox(width: 8),
-                Text('${(_nowVol * 100).round()}%', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0x40FFFFFF))),
+                Text('${((_localVol ?? _nowVol) * 100).round()}%', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0x40FFFFFF))),
               ]),
             ])),
             const SizedBox(height: 12),
