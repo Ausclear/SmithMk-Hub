@@ -134,9 +134,16 @@ class _MusicPageState extends State<MusicPage> {
       if (mounted) {
         setState(() {
           _deviceStates[entityId] = data['state'] as String? ?? 'idle';
-          if (data['attributes'] != null) _deviceAttrs[entityId] = Map<String, dynamic>.from(data['attributes']);
+          if (data['attributes'] != null) {
+            final newAttrs = Map<String, dynamic>.from(data['attributes']);
+            // If volume is locked (user just dragged slider), preserve our volume value
+            if (_volLocked && entityId == _selectedEcho) {
+              final currentVol = _deviceAttrs[entityId]?['volume_level'];
+              if (currentVol != null) newAttrs['volume_level'] = currentVol;
+            }
+            _deviceAttrs[entityId] = newAttrs;
+          }
         });
-        // Sync position when spotify entity updates
         if (entityId == 'media_player.spotify_smithmk') _syncLivePosition();
       }
     }, onError: (_) {
@@ -212,14 +219,8 @@ class _MusicPageState extends State<MusicPage> {
     HAService.mediaNext(_selectedEcho);
   }
   void _prev() {
-    // PWA logic: if >3 seconds in, seek to 0 (restart). Otherwise previous track.
-    if (_livePosition > 3) {
-      setState(() => _livePosition = 0);
-      HAService.callService('media_player', 'media_seek', {'entity_id': _selectedEcho, 'seek_position': 0});
-    } else {
-      setState(() => _livePosition = 0);
-      HAService.mediaPrev(_selectedEcho);
-    }
+    setState(() => _livePosition = 0);
+    HAService.mediaPrev(_selectedEcho);
   }
   double? _localVol; // Local vol while dragging — null means use HA value
   bool _volLocked = false; // Lock SSE vol updates after commit
