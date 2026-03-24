@@ -222,14 +222,17 @@ class _MusicPageState extends State<MusicPage> {
     }
   }
   double? _localVol; // Local vol while dragging — null means use HA value
+  bool _volLocked = false; // Lock SSE vol updates after commit
 
   void _volChanged(double v) {
-    setState(() => _localVol = v);
+    setState(() { _localVol = v; _volLocked = true; });
   }
   void _volCommit(double v) {
-    setState(() => _localVol = null);
-    // Only target the Echo entity — volume on the device, not spotify
     HAService.mediaVolume(_selectedEcho, v);
+    // Keep local vol locked for 2s so SSE doesn't bounce it back
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) setState(() { _localVol = null; _volLocked = false; });
+    });
   }
 
   String get _selState => _deviceStates[_selectedEcho] ?? 'idle';
