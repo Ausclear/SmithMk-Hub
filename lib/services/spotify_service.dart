@@ -1,34 +1,51 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-/// Spotify search via the PWA's API proxy.
-/// Uses client credentials flow (no user auth needed for search).
+/// Spotify search — direct client credentials, no Vercel proxy
 class SpotifyService {
-  static const _base = 'https://smarthome-eight-livid.vercel.app/api/spotify';
+  static const _clientId = '1bf984dbd8a84110bb6e1b29a589136c';
+  static const _clientSecret = 'bc9a9b510e5a484b82285033297584f7';
+  static String? _token;
+  static DateTime? _tokenExpiry;
 
-  /// Search Spotify for tracks, albums, artists, playlists
+  static Future<String> _getToken() async {
+    if (_token != null && _tokenExpiry != null && DateTime.now().isBefore(_tokenExpiry!)) return _token!;
+    final resp = await http.post(Uri.parse('https://accounts.spotify.com/api/token'),
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: 'grant_type=client_credentials&client_id=$_clientId&client_secret=$_clientSecret')
+      .timeout(const Duration(seconds: 10));
+    if (resp.statusCode != 200) throw Exception('Spotify token failed: ${resp.statusCode}');
+    final d = json.decode(resp.body);
+    _token = d['access_token'];
+    _tokenExpiry = DateTime.now().add(Duration(seconds: (d['expires_in'] as int) - 60));
+    return _token!;
+  }
+
   static Future<SpotifyResults> search(String query) async {
     if (query.trim().isEmpty) return SpotifyResults.empty();
-    final resp = await http.get(
-      Uri.parse('$_base?q=${Uri.encodeComponent(query.trim())}'),
-    ).timeout(const Duration(seconds: 10));
+    final token = await _getToken();
+    final q = Uri.encodeComponent(query.trim());
+    final resp = await http.get(Uri.parse('https://api.spotify.com/v1/search?q=$q&type=track,album,artist,playlist&limit=10&market=AU'),
+      headers: {'Authorization': 'Bearer $token'}).timeout(const Duration(seconds: 10));
     if (resp.statusCode != 200) throw Exception('Spotify search failed: ${resp.statusCode}');
     final d = json.decode(resp.body);
-    return SpotifyResults.fromJson(d);
-  }
-
-  /// Get artist details + top tracks + albums
-  static Future<SpotifyResults> getArtist(String artistId) async {
-    final resp = await http.get(Uri.parse('$_base?artist_id=$artistId')).timeout(const Duration(seconds: 10));
-    if (resp.statusCode != 200) throw Exception('Spotify artist failed: ${resp.statusCode}');
-    return SpotifyResults.fromJson(json.decode(resp.body));
-  }
-
-  /// Get album tracks
-  static Future<SpotifyResults> getAlbum(String albumId) async {
-    final resp = await http.get(Uri.parse('$_base?album_id=$albumId')).timeout(const Duration(seconds: 10));
-    if (resp.statusCode != 200) throw Exception('Spotify album failed: ${resp.statusCode}');
-    return SpotifyResults.fromJson(json.decode(resp.body));
+    return SpotifyResults(
+      tracks: ((d['tracks']?['items'] as List?) ?? []).map((t) => SpotifyTrack(
+        id: t['id'] ?? '', uri: t['uri'] ?? '', name: t['name'] ?? '',
+        artist: t['artists']?[0]?['name'], album: t['album']?['name'],
+        art: t['album']?['images']?[1]?['url'] ?? t['album']?['images']?[0]?['url'],
+        duration: t['duration_ms'])).toList(),
+      albums: ((d['albums']?['items'] as List?) ?? []).map((a) => SpotifyAlbum(
+        id: a['id'] ?? '', uri: a['uri'] ?? '', name: a['name'] ?? '',
+        artist: a['artists']?[0]?['name'], art: a['images']?[1]?['url'] ?? a['images']?[0]?['url'],
+        year: (a['release_date'] ?? '').toString().substring(0, 4))).toList(),
+      artists: ((d['artists']?['items'] as List?) ?? []).map((a) => SpotifyArtist(
+        id: a['id'] ?? '', uri: a['uri'] ?? '', name: a['name'] ?? '',
+        art: a['images']?.isNotEmpty == true ? (a['images'][1]?['url'] ?? a['images'][0]?['url']) : null)).toList(),
+      playlists: ((d['playlists']?['items'] as List?) ?? []).where((p) => p != null).map((p) => SpotifyPlaylist(
+        id: p['id'] ?? '', uri: p['uri'] ?? '', name: p['name'] ?? '',
+        owner: p['owner']?['display_name'], art: p['images']?[0]?['url'])).toList(),
+    );
   }
 }
 
@@ -37,105 +54,32 @@ class SpotifyResults {
   final List<SpotifyAlbum> albums;
   final List<SpotifyArtist> artists;
   final List<SpotifyPlaylist> playlists;
-  final SpotifyArtistInfo? artistInfo;
-  final SpotifyAlbumInfo? albumInfo;
-
-  SpotifyResults({required this.tracks, required this.albums, required this.artists, required this.playlists, this.artistInfo, this.albumInfo});
-
+  SpotifyResults({required this.tracks, required this.albums, required this.artists, required this.playlists});
   factory SpotifyResults.empty() => SpotifyResults(tracks: [], albums: [], artists: [], playlists: []);
-
-  factory SpotifyResults.fromJson(Map<String, dynamic> j) => SpotifyResults(
-    tracks: (j['tracks'] as List? ?? []).map((t) => SpotifyTrack.fromJson(t)).toList(),
-    albums: (j['albums'] as List? ?? []).map((a) => SpotifyAlbum.fromJson(a)).toList(),
-    artists: (j['artists'] as List? ?? []).map((a) => SpotifyArtist.fromJson(a)).toList(),
-    playlists: (j['playlists'] as List? ?? []).map((p) => SpotifyPlaylist.fromJson(p)).toList(),
-    artistInfo: j['artistInfo'] != null ? SpotifyArtistInfo.fromJson(j['artistInfo']) : null,
-    albumInfo: j['albumInfo'] != null ? SpotifyAlbumInfo.fromJson(j['albumInfo']) : null,
-  );
 }
 
 class SpotifyTrack {
   final String id, uri, name;
   final String? artist, album, art;
   final int? duration;
-
   SpotifyTrack({required this.id, required this.uri, required this.name, this.artist, this.album, this.art, this.duration});
-
-  factory SpotifyTrack.fromJson(Map<String, dynamic> j) => SpotifyTrack(
-    id: j['id'] ?? '', uri: j['uri'] ?? '', name: j['name'] ?? '',
-    artist: j['artist'], album: j['album'], art: j['art'], duration: j['duration'],
-  );
-
-  String get durationStr {
-    if (duration == null) return '';
-    final m = duration! ~/ 60000;
-    final s = (duration! % 60000) ~/ 1000;
-    return '$m:${s.toString().padLeft(2, '0')}';
-  }
+  String get durationStr { if (duration == null) return ''; final m = duration! ~/ 60000; final s = (duration! % 60000) ~/ 1000; return '$m:${s.toString().padLeft(2, '0')}'; }
 }
 
 class SpotifyAlbum {
   final String id, uri, name;
-  final String? artist, art, year, type;
-
-  SpotifyAlbum({required this.id, required this.uri, required this.name, this.artist, this.art, this.year, this.type});
-
-  factory SpotifyAlbum.fromJson(Map<String, dynamic> j) => SpotifyAlbum(
-    id: j['id'] ?? '', uri: j['uri'] ?? '', name: j['name'] ?? '',
-    artist: j['artist'], art: j['art'], year: j['year'], type: j['type'],
-  );
+  final String? artist, art, year;
+  SpotifyAlbum({required this.id, required this.uri, required this.name, this.artist, this.art, this.year});
 }
 
 class SpotifyArtist {
   final String id, uri, name;
   final String? art;
-  final List<String> genres;
-  final int? followers;
-
-  SpotifyArtist({required this.id, required this.uri, required this.name, this.art, this.genres = const [], this.followers});
-
-  factory SpotifyArtist.fromJson(Map<String, dynamic> j) => SpotifyArtist(
-    id: j['id'] ?? '', uri: j['uri'] ?? '', name: j['name'] ?? '',
-    art: j['art'], genres: List<String>.from(j['genres'] ?? []), followers: j['followers'],
-  );
+  SpotifyArtist({required this.id, required this.uri, required this.name, this.art});
 }
 
 class SpotifyPlaylist {
   final String id, uri, name;
   final String? owner, art;
-  final int? totalTracks;
-
-  SpotifyPlaylist({required this.id, required this.uri, required this.name, this.owner, this.art, this.totalTracks});
-
-  factory SpotifyPlaylist.fromJson(Map<String, dynamic> j) => SpotifyPlaylist(
-    id: j['id'] ?? '', uri: j['uri'] ?? '', name: j['name'] ?? '',
-    owner: j['owner'], art: j['art'], totalTracks: j['tracks'],
-  );
-}
-
-class SpotifyArtistInfo {
-  final String id, uri, name;
-  final String? art;
-  final List<String> genres;
-  final int? followers;
-
-  SpotifyArtistInfo({required this.id, required this.uri, required this.name, this.art, this.genres = const [], this.followers});
-
-  factory SpotifyArtistInfo.fromJson(Map<String, dynamic> j) => SpotifyArtistInfo(
-    id: j['id'] ?? '', uri: j['uri'] ?? '', name: j['name'] ?? '',
-    art: j['art'], genres: List<String>.from(j['genres'] ?? []), followers: j['followers'],
-  );
-}
-
-class SpotifyAlbumInfo {
-  final String id, uri, name;
-  final String? artist, art, year;
-  final int? total;
-
-  SpotifyAlbumInfo({required this.id, required this.uri, required this.name, this.artist, this.art, this.year, this.total});
-
-  factory SpotifyAlbumInfo.fromJson(Map<String, dynamic> j) => SpotifyAlbumInfo(
-    id: j['id'] ?? '', uri: j['uri'] ?? '', name: j['name'] ?? '',
-    artist: j['artist'], art: j['art'], year: j['year'], total: j['total'],
-  );
+  SpotifyPlaylist({required this.id, required this.uri, required this.name, this.owner, this.art});
 }
