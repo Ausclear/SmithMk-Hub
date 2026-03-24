@@ -15,6 +15,7 @@ dependencies:
   flutter_dynamic_icon: ^2.1.0
   syncfusion_flutter_gauges: ^28.1.33
   http: ^1.2.1
+  web_socket_channel: ^3.0.1
 
 dev_dependencies:
   flutter_test:
