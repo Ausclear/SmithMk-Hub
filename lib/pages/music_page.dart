@@ -179,7 +179,7 @@ class _MusicPageState extends State<MusicPage> {
                 Container(width: 64, height: 64, decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), color: const Color(0xFF111111)),
                   clipBehavior: Clip.antiAlias,
                   child: _nowArt != null
-                    ? Image.network(_nowArt!.startsWith('http') ? _nowArt! : '${HAService.haExternal}$_nowArt',
+                    ? Image.network(_nowArt!.startsWith('http') ? _nowArt! : '${HAService.haUrl}$_nowArt',
                         fit: BoxFit.cover, filterQuality: FilterQuality.high, errorBuilder: (_, __, ___) => _artIcon())
                     : _artIcon()),
                 const SizedBox(width: 14),
