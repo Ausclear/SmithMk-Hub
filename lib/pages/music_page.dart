@@ -194,8 +194,13 @@ class _MusicPageState extends State<MusicPage> {
 
   // Shortcuts for selected device
   void _play() {
-    // When Spotify is active, control ONLY the spotify entity — not the Echo
-    if (_spotifyState == 'playing' || _spotifyState == 'paused') {
+    // Optimistic UI
+    final willPlay = !_isPlaying;
+    setState(() {
+      _deviceStates['media_player.spotify_smithmk'] = willPlay ? 'playing' : 'paused';
+    });
+    // When Spotify is active, control ONLY the spotify entity
+    if (_spotifyState == 'playing' || _spotifyState == 'paused' || _nowTitle != null) {
       HAService.mediaPlayPause('media_player.spotify_smithmk');
     } else {
       HAService.mediaPlayPause(_selectedEcho);
@@ -203,11 +208,27 @@ class _MusicPageState extends State<MusicPage> {
     Future.delayed(const Duration(seconds: 1), _pollSpotify);
   }
   void _stop() {
-    HAService.mediaStop('media_player.spotify_smithmk');
+    setState(() {
+      _deviceStates['media_player.spotify_smithmk'] = 'idle';
+      _livePosition = 0;
+    });
+    // media_pause first then media_stop — Spotify doesn't always respond to stop alone
+    HAService.callService('media_player', 'media_pause', {'entity_id': 'media_player.spotify_smithmk'});
+    Future.delayed(const Duration(milliseconds: 500), () {
+      HAService.mediaStop('media_player.spotify_smithmk');
+    });
     Future.delayed(const Duration(seconds: 1), _pollSpotify);
   }
-  void _next() { HAService.mediaNext('media_player.spotify_smithmk'); Future.delayed(const Duration(seconds: 1), _pollSpotify); }
-  void _prev() { HAService.mediaPrev('media_player.spotify_smithmk'); Future.delayed(const Duration(seconds: 1), _pollSpotify); }
+  void _next() {
+    setState(() => _livePosition = 0);
+    HAService.mediaNext('media_player.spotify_smithmk');
+    Future.delayed(const Duration(seconds: 1), _pollSpotify);
+  }
+  void _prev() {
+    setState(() => _livePosition = 0);
+    HAService.mediaPrev('media_player.spotify_smithmk');
+    Future.delayed(const Duration(seconds: 1), _pollSpotify);
+  }
   void _vol(double v) {
     // Optimistic UI update immediately
     setState(() {
@@ -243,7 +264,7 @@ class _MusicPageState extends State<MusicPage> {
         child: Column(children: [
           // Header
           Padding(padding: const EdgeInsets.fromLTRB(20, 16, 20, 0), child: Row(children: [
-            GestureDetector(onTap: () => Navigator.pop(context),
+            GestureDetector(onTap: () { if (Navigator.canPop(context)) Navigator.pop(context); },
               child: Icon(PhosphorIcons.caretLeft(PhosphorIconsStyle.light), size: 20, color: SmithMkColors.textTertiary)),
             const SizedBox(width: 8),
             Icon(PhosphorIcons.headphones(PhosphorIconsStyle.light), size: 22, color: SmithMkColors.gold),
