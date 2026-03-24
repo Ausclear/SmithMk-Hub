@@ -1,11 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-/// HA service — routes through the local PWA on the Ubuntu VM (no CORS issues)
 class HAService {
-  // Local PWA running on Ubuntu VM — same network, no CORS
   static const apiBase = 'http://192.168.1.47:3000';
-  // Direct HA URL for image loading etc
   static const haUrl = 'http://192.168.1.101:8123';
 
   static Future<List<Map<String, dynamic>>> getStates() async {
@@ -26,6 +24,9 @@ class HAService {
     if (resp.statusCode != 200) throw Exception('HA $domain/$service failed: ${resp.statusCode}');
   }
 
+  // Media shortcuts — play and pause are SEPARATE calls for Spotify
+  static Future<void> mediaPlay(String entityId) => callService('media_player', 'media_play', {'entity_id': entityId});
+  static Future<void> mediaPause(String entityId) => callService('media_player', 'media_pause', {'entity_id': entityId});
   static Future<void> mediaPlayPause(String entityId) => callService('media_player', 'media_play_pause', {'entity_id': entityId});
   static Future<void> mediaNext(String entityId) => callService('media_player', 'media_next_track', {'entity_id': entityId});
   static Future<void> mediaPrev(String entityId) => callService('media_player', 'media_previous_track', {'entity_id': entityId});
@@ -37,5 +38,27 @@ class HAService {
       headers: {'Content-Type': 'application/json'},
       body: json.encode({'uri': uri, 'source': source})).timeout(const Duration(seconds: 15));
     if (resp.statusCode != 200) throw Exception('play-spotify failed: ${resp.statusCode}');
+  }
+
+  /// SSE stream — connects to PWA's /api/ha/stream for real-time state updates
+  static Stream<Map<String, dynamic>> stateStream() async* {
+    final client = http.Client();
+    final request = http.Request('GET', Uri.parse('$apiBase/api/ha/stream'));
+    final response = await client.send(request);
+    String buffer = '';
+    await for (final chunk in response.stream.transform(utf8.decoder)) {
+      buffer += chunk;
+      while (buffer.contains('\n\n')) {
+        final idx = buffer.indexOf('\n\n');
+        final message = buffer.substring(0, idx);
+        buffer = buffer.substring(idx + 2);
+        if (message.startsWith('data: ')) {
+          try {
+            final data = json.decode(message.substring(6)) as Map<String, dynamic>;
+            yield data;
+          } catch (_) {}
+        }
+      }
+    }
   }
 }

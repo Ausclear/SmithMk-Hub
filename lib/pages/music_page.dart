@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -56,18 +57,19 @@ class _MusicPageState extends State<MusicPage> {
   Map<String, String> _deviceStates = {}; // entity_id -> state
   Map<String, Map<String, dynamic>> _deviceAttrs = {}; // entity_id -> attributes
   Timer? _pollTimer;
+  StreamSubscription? _sseSubscription;
 
   @override
   void initState() {
     super.initState();
-    _pollDevices();
-    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => _pollDevices());
+    _loadInitialState();
+    _connectSSE();
   }
 
   @override
-  void dispose() { _searchCtrl.dispose(); _debounce?.cancel(); _pollTimer?.cancel(); super.dispose(); }
+  void dispose() { _searchCtrl.dispose(); _debounce?.cancel(); _pollTimer?.cancel(); _sseSubscription?.cancel(); super.dispose(); }
 
-  Future<void> _pollDevices() async {
+  Future<void> _loadInitialState() async {
     try {
       final entities = await HAService.getEntities('media_player');
       final states = <String, String>{};
@@ -80,6 +82,27 @@ class _MusicPageState extends State<MusicPage> {
       if (mounted) setState(() { _deviceStates = states; _deviceAttrs = attrs; });
     } catch (_) {}
   }
+
+  void _connectSSE() {
+    _sseSubscription?.cancel();
+    _sseSubscription = HAService.stateStream().listen((data) {
+      final entityId = data['entity_id'] as String?;
+      if (entityId == null) return;
+      if (mounted) {
+        setState(() {
+          _deviceStates[entityId] = data['state'] as String? ?? 'idle';
+          _deviceAttrs[entityId] = (data['attributes'] as Map<String, dynamic>?) ?? {};
+        });
+      }
+    }, onError: (_) {
+      // Reconnect after 5 seconds on error
+      Future.delayed(const Duration(seconds: 5), () { if (mounted) _connectSSE(); });
+    }, onDone: () {
+      Future.delayed(const Duration(seconds: 5), () { if (mounted) _connectSSE(); });
+    });
+  }
+
+  Future<void> _pollDevices() => _loadInitialState();
 
   void _onSearch(String query) {
     _debounce?.cancel();
@@ -125,10 +148,17 @@ class _MusicPageState extends State<MusicPage> {
   }
 
   // Shortcuts for selected device
-  void _play() { HAService.mediaPlayPause(_selectedEcho); Future.delayed(const Duration(seconds: 1), _pollDevices); }
-  void _stop() { HAService.mediaStop(_selectedEcho); Future.delayed(const Duration(seconds: 1), _pollDevices); }
-  void _next() { HAService.mediaNext(_selectedEcho); Future.delayed(const Duration(seconds: 1), _pollDevices); }
-  void _prev() { HAService.mediaPrev(_selectedEcho); Future.delayed(const Duration(seconds: 1), _pollDevices); }
+  void _play() {
+    // Toggle play/pause on BOTH the selected Echo AND the Spotify entity
+    HAService.mediaPlayPause(_selectedEcho);
+    if (_spotifyState == 'playing' || _spotifyState == 'paused') {
+      HAService.mediaPlayPause('media_player.spotify_smithmk');
+    }
+    Future.delayed(const Duration(seconds: 1), _loadInitialState);
+  }
+  void _stop() { HAService.mediaStop(_selectedEcho); HAService.mediaStop('media_player.spotify_smithmk'); Future.delayed(const Duration(seconds: 1), _loadInitialState); }
+  void _next() { HAService.mediaNext('media_player.spotify_smithmk'); Future.delayed(const Duration(seconds: 1), _loadInitialState); }
+  void _prev() { HAService.mediaPrev('media_player.spotify_smithmk'); Future.delayed(const Duration(seconds: 1), _loadInitialState); }
   void _vol(double v) { HAService.mediaVolume(_selectedEcho, v); }
 
   String get _selState => _deviceStates[_selectedEcho] ?? 'idle';
