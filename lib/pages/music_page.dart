@@ -57,6 +57,8 @@ class _MusicPageState extends State<MusicPage> {
   Map<String, String> _deviceStates = {}; // entity_id -> state
   Map<String, Map<String, dynamic>> _deviceAttrs = {}; // entity_id -> attributes
   Timer? _pollTimer;
+  Timer? _tickTimer;
+  int _livePosition = 0;
   StreamSubscription? _sseSubscription;
 
   @override
@@ -66,10 +68,12 @@ class _MusicPageState extends State<MusicPage> {
     _connectSSE();
     // Poll spotify entity every 3s — SSE filters it out
     _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) => _pollSpotify());
+    // Tick progress bar every second
+    _tickTimer = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
   }
 
   @override
-  void dispose() { _searchCtrl.dispose(); _debounce?.cancel(); _pollTimer?.cancel(); _sseSubscription?.cancel(); super.dispose(); }
+  void dispose() { _searchCtrl.dispose(); _debounce?.cancel(); _pollTimer?.cancel(); _tickTimer?.cancel(); _sseSubscription?.cancel(); super.dispose(); }
 
   Future<void> _loadInitialState() async {
     try {
@@ -82,6 +86,7 @@ class _MusicPageState extends State<MusicPage> {
         attrs[id] = (e['attributes'] as Map<String, dynamic>?) ?? {};
       }
       if (mounted) setState(() { _deviceStates = states; _deviceAttrs = attrs; });
+      _syncLivePosition();
     } catch (_) {}
   }
 
@@ -90,12 +95,37 @@ class _MusicPageState extends State<MusicPage> {
       final entities = await HAService.getEntities('media_player');
       final spot = entities.firstWhere((e) => e['entity_id'] == 'media_player.spotify_smithmk', orElse: () => <String, dynamic>{});
       if (spot.isNotEmpty && mounted) {
+        final attrs = (spot['attributes'] as Map<String, dynamic>?) ?? {};
         setState(() {
           _deviceStates['media_player.spotify_smithmk'] = spot['state'] as String? ?? 'idle';
-          _deviceAttrs['media_player.spotify_smithmk'] = (spot['attributes'] as Map<String, dynamic>?) ?? {};
+          _deviceAttrs['media_player.spotify_smithmk'] = attrs;
         });
+        _syncLivePosition();
       }
     } catch (_) {}
+  }
+
+  /// Calculate the real position based on media_position + time elapsed since media_position_updated_at
+  void _syncLivePosition() {
+    final attrs = _spotifyAttrs;
+    final pos = (attrs['media_position'] as num?)?.toInt() ?? 0;
+    final updatedAt = attrs['media_position_updated_at']?.toString();
+    if (updatedAt != null && _spotifyState == 'playing') {
+      final updatedTime = DateTime.tryParse(updatedAt);
+      if (updatedTime != null) {
+        final elapsed = DateTime.now().difference(updatedTime).inSeconds;
+        _livePosition = pos + elapsed;
+        return;
+      }
+    }
+    _livePosition = pos;
+  }
+
+  /// Tick every second — increment live position if playing
+  void _tick() {
+    if (_spotifyState == 'playing') {
+      setState(() => _livePosition++);
+    }
   }
 
   void _connectSSE() {
@@ -202,7 +232,7 @@ class _MusicPageState extends State<MusicPage> {
   String? get _nowArt => _spotifyAttrs['entity_picture']?.toString() ?? _selAttrs['entity_picture']?.toString();
   double get _nowVol => (_selAttrs['volume_level'] as num?)?.toDouble() ?? 0.3;
   int? get _nowDuration => (_spotifyAttrs['media_duration'] as num?)?.toInt() ?? (_selAttrs['media_duration'] as num?)?.toInt();
-  int? get _nowPosition => (_spotifyAttrs['media_position'] as num?)?.toInt() ?? (_selAttrs['media_position'] as num?)?.toInt();
+  int get _nowPosition => _livePosition;
 
   @override
   Widget build(BuildContext context) {
@@ -257,7 +287,7 @@ class _MusicPageState extends State<MusicPage> {
               ]),
               if (_nowDuration != null && _nowDuration! > 0) ...[
                 const SizedBox(height: 12),
-                _progressBar(_nowPosition ?? 0, _nowDuration!),
+                _progressBar(_nowPosition, _nowDuration!),
               ],
               const SizedBox(height: 12),
               // Controls
