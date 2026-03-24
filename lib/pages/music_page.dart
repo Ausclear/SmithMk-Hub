@@ -133,13 +133,16 @@ class _MusicPageState extends State<MusicPage> {
 
   String get _selState => _deviceStates[_selectedEcho] ?? 'idle';
   Map<String, dynamic> get _selAttrs => _deviceAttrs[_selectedEcho] ?? {};
-  bool get _isPlaying => _selState == 'playing';
-  String? get _nowTitle => _selAttrs['media_title']?.toString();
-  String? get _nowArtist => _selAttrs['media_artist']?.toString();
-  String? get _nowArt => _selAttrs['entity_picture']?.toString();
+  // Now playing reads from Spotify entity if it's playing, otherwise from selected Echo
+  Map<String, dynamic> get _spotifyAttrs => _deviceAttrs['media_player.spotify_smithmk'] ?? {};
+  String get _spotifyState => _deviceStates['media_player.spotify_smithmk'] ?? 'idle';
+  bool get _isPlaying => _spotifyState == 'playing' || _selState == 'playing';
+  String? get _nowTitle => _spotifyAttrs['media_title']?.toString() ?? _selAttrs['media_title']?.toString();
+  String? get _nowArtist => _spotifyAttrs['media_artist']?.toString() ?? _selAttrs['media_artist']?.toString();
+  String? get _nowArt => _spotifyAttrs['entity_picture']?.toString() ?? _selAttrs['entity_picture']?.toString();
   double get _nowVol => (_selAttrs['volume_level'] as num?)?.toDouble() ?? 0.3;
-  int? get _nowDuration => (_selAttrs['media_duration'] as num?)?.toInt();
-  int? get _nowPosition => (_selAttrs['media_position'] as num?)?.toInt();
+  int? get _nowDuration => (_spotifyAttrs['media_duration'] as num?)?.toInt() ?? (_selAttrs['media_duration'] as num?)?.toInt();
+  int? get _nowPosition => (_spotifyAttrs['media_position'] as num?)?.toInt() ?? (_selAttrs['media_position'] as num?)?.toInt();
 
   @override
   Widget build(BuildContext context) {
