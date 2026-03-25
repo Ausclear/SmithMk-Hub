@@ -57,7 +57,8 @@ class _MusicPageState extends State<MusicPage> {
   Map<String, Map<String, dynamic>> _deviceAttrs = {};
 
   // Volume anti-bounce
-  double? _localVol;
+  double? _localVol;        // While dragging — UI only
+  double? _committedVol;    // Last value sent to HA — used during lockout
   bool _volLocked = false;
   Timer? _volLockTimer;
 
@@ -106,10 +107,9 @@ class _MusicPageState extends State<MusicPage> {
     setState(() {
       _deviceStates[entityId] = data['state'] as String? ?? 'idle';
       final newAttrs = Map<String, dynamic>.from(data['attributes'] ?? {});
-      // Anti-bounce: if vol locked and this is the selected echo or spotify, preserve volume
-      if (_volLocked && (entityId == _selectedEcho || entityId == HAService.spotifyEntity)) {
-        final oldVol = _deviceAttrs[entityId]?['volume_level'];
-        if (oldVol != null) newAttrs['volume_level'] = oldVol;
+      // Anti-bounce: ALWAYS use committed volume during lockout — ignore ALL remote volume
+      if (_volLocked && _committedVol != null && entityId == HAService.spotifyEntity) {
+        newAttrs['volume_level'] = _committedVol;
       }
       _deviceAttrs[entityId] = newAttrs;
     });
@@ -214,14 +214,16 @@ class _MusicPageState extends State<MusicPage> {
 
   // ─── Volume — anti-bounce pattern ───
   void _volChanged(double v) {
-    setState(() { _localVol = v; _volLocked = true; });
+    setState(() { _localVol = v; _volLocked = true; _committedVol = v; });
   }
   void _volCommit(double v) {
-    setState(() => _localVol = null);
+    setState(() { _localVol = null; _committedVol = v; _volLocked = true; });
+    // Force the attrs to our value immediately
+    _deviceAttrs[HAService.spotifyEntity] = {..._spotifyAttrs, 'volume_level': v};
     HAService.musicVolume(v);
     _volLockTimer?.cancel();
-    _volLockTimer = Timer(const Duration(seconds: 3), () {
-      if (mounted) setState(() => _volLocked = false);
+    _volLockTimer = Timer(const Duration(seconds: 5), () {
+      if (mounted) setState(() { _volLocked = false; _committedVol = null; });
     });
   }
 
