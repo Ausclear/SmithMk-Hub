@@ -7,7 +7,7 @@ import '../theme/smithmk_theme.dart';
 import '../services/ha_service.dart';
 import '../services/spotify_service.dart';
 
-// ─── Device list matching PWA ───
+// ─── Device list — matches PWA exactly ───
 const _ECHOS = [
   ('media_player.meals_echo', 'Meals Echo'),
   ('media_player.mark_s_echo_dot', "Mark's Echo Dot"),
@@ -38,6 +38,19 @@ const _SPOTIFY_SOURCES = {
   'media_player.xendan_s_room': "Xendan's Room",
 };
 
+/// Per-device state — mirrors PWA's Dev type exactly
+class _Dev {
+  final String entity, name, state;
+  final String? title, artist, album, art;
+  final int? vol; // 0-100 (matches PWA)
+  final bool? muted, shuffle;
+  final num? duration, position;
+  final String? positionUpdated;
+  _Dev({required this.entity, required this.name, required this.state,
+    this.title, this.artist, this.album, this.art,
+    this.vol, this.muted, this.shuffle, this.duration, this.position, this.positionUpdated});
+}
+
 class MusicPage extends StatefulWidget {
   const MusicPage({super.key});
   @override
@@ -50,131 +63,115 @@ class _MusicPageState extends State<MusicPage> {
   SpotifyResults? _results;
   bool _searching = false;
   String? _playingUri;
-  String _selectedEcho = _ECHOS[0].$1;
 
-  // State from HA
-  Map<String, String> _deviceStates = {};
-  Map<String, Map<String, dynamic>> _deviceAttrs = {};
-
-  // Volume anti-bounce
-  double? _localVol;        // While dragging — UI only
-  double? _committedVol;    // Last value sent to HA — used during lockout
-  bool _volLocked = false;
-  Timer? _volLockTimer;
-
-  // Progress ticking
-  int _livePosition = 0;
-  String? _lastTrack;
+  // Device state — mirrors PWA
+  List<_Dev> _devs = [];
+  String? _sel; // selected entity_id
+  Map<String, bool?> _optPlay = {}; // optimistic play state per entity
+  int? _localVol; // 0-100, null = use HA value
   Timer? _tickTimer;
+  int _livePos = 0;
   StreamSubscription? _wsSub;
+
+  _Dev? get _active => _devs.firstWhere((d) => d.entity == _sel, orElse: () => _devs.isNotEmpty ? _devs.first : _Dev(entity: '', name: '', state: 'idle'));
+
+  bool _getEffPlaying(String entity) {
+    final opt = _optPlay[entity];
+    if (opt != null) return opt;
+    return _devs.any((d) => d.entity == entity && d.state == 'playing');
+  }
 
   @override
   void initState() {
     super.initState();
-    _loadInitialState();
+    _loadState();
     HAService.connect();
-    _wsSub = HAService.stateStream.listen(_onStateChange);
+    _wsSub = HAService.stateStream.listen((_) => _loadState()); // Rebuild on any state change
     _tickTimer = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
   }
 
   @override
-  void dispose() {
-    _searchCtrl.dispose();
-    _debounce?.cancel();
-    _tickTimer?.cancel();
-    _volLockTimer?.cancel();
-    _wsSub?.cancel();
-    super.dispose();
-  }
+  void dispose() { _searchCtrl.dispose(); _debounce?.cancel(); _tickTimer?.cancel(); _wsSub?.cancel(); super.dispose(); }
 
-  Future<void> _loadInitialState() async {
+  /// Build device list — EXACT copy of PWA poll() logic
+  Future<void> _loadState() async {
     try {
-      final entities = await HAService.getEntities('media_player');
-      for (final e in entities) {
-        final id = e['entity_id'] as String;
-        _deviceStates[id] = e['state'] as String? ?? 'unavailable';
-        _deviceAttrs[id] = (e['attributes'] as Map<String, dynamic>?) ?? {};
+      final all = await HAService.getEntities('media_player');
+      final spEnt = all.firstWhere((e) => e['entity_id'] == HAService.spotifyEntity, orElse: () => <String, dynamic>{});
+      final sp = (spEnt['attributes'] as Map<String, dynamic>?) ?? {};
+      final spState = spEnt['state'] as String? ?? 'idle';
+      final spOn = spState == 'playing' || spState == 'paused';
+
+      final devs = <_Dev>[];
+      for (final echo in _ECHOS) {
+        final s = all.firstWhere((e) => e['entity_id'] == echo.$1, orElse: () => <String, dynamic>{});
+        if (s.isEmpty || s['state'] == 'unavailable') {
+          devs.add(_Dev(entity: echo.$1, name: echo.$2, state: 'unavailable'));
+          continue;
+        }
+        final a = (s['attributes'] as Map<String, dynamic>?) ?? {};
+        // PWA logic: use Spotify data if Spotify is on AND source matches this Echo
+        final src = spOn && sp['source'] == _SPOTIFY_SOURCES[echo.$1];
+        devs.add(_Dev(
+          entity: echo.$1, name: echo.$2, state: s['state'] as String? ?? 'idle',
+          title: (src ? sp['media_title'] : a['media_title'])?.toString(),
+          artist: (src ? sp['media_artist'] : a['media_artist'])?.toString(),
+          album: (src ? sp['media_album_name'] : a['media_album_name'])?.toString(),
+          art: (src ? sp['entity_picture'] : a['entity_picture'])?.toString(),
+          vol: a['volume_level'] is num ? (a['volume_level'] as num) * 100 ~/ 1 : null, // Always Echo vol
+          muted: a['is_volume_muted'] as bool?,
+          duration: src ? sp['media_duration'] as num? : a['media_duration'] as num?,
+          position: src ? sp['media_position'] as num? : a['media_position'] as num?,
+          positionUpdated: (src ? sp['media_position_updated_at'] : a['media_position_updated_at'])?.toString(),
+          shuffle: (src ? sp['shuffle'] : a['shuffle']) as bool?,
+        ));
       }
-      if (mounted) setState(() {});
+
+      if (!mounted) return;
+      setState(() {
+        _devs = devs;
+        // Clear optimistic states that match reality
+        final upd = Map<String, bool?>.from(_optPlay);
+        for (final entry in _optPlay.entries) {
+          if (entry.value == null) continue;
+          final real = devs.firstWhere((d) => d.entity == entry.key, orElse: () => _Dev(entity: '', name: '', state: 'idle'));
+          if ((real.state == 'playing') == entry.value) upd.remove(entry.key);
+        }
+        _optPlay = upd;
+        // Clear localVol if HA matches (within 2%)
+        if (_localVol != null && _active != null && _active!.vol != null) {
+          if ((_localVol! - _active!.vol!).abs() <= 2) _localVol = null;
+        }
+        // Set selection if not set
+        if (_sel == null || !devs.any((d) => d.entity == _sel)) {
+          _sel = devs.firstWhere((d) => d.state == 'playing', orElse: () => devs.first).entity;
+        }
+      });
       _syncPosition();
     } catch (_) {}
   }
 
-  void _onStateChange(Map<String, dynamic> data) {
-    final entityId = data['entity_id'] as String?;
-    if (entityId == null) return;
-    if (!mounted) return;
-    setState(() {
-      _deviceStates[entityId] = data['state'] as String? ?? 'idle';
-      final newAttrs = Map<String, dynamic>.from(data['attributes'] ?? {});
-      // Anti-bounce: ALWAYS use committed volume during lockout
-      if (_volLocked && _committedVol != null && (entityId == HAService.spotifyEntity || entityId == _selectedEcho)) {
-        newAttrs['volume_level'] = _committedVol;
-      }
-      _deviceAttrs[entityId] = newAttrs;
-    });
-    if (entityId == HAService.spotifyEntity) _syncPosition();
-  }
-
   void _syncPosition() {
-    final attrs = _spotifyMatchesSelected ? _spotifyAttrs : (_deviceAttrs[_selectedEcho] ?? {});
-    final pos = (attrs['media_position'] as num?)?.toInt() ?? 0;
-    final updatedAt = attrs['media_position_updated_at']?.toString();
-    final track = attrs['media_title']?.toString();
-    final playing = _spotifyMatchesSelected ? _isPlaying : (_deviceStates[_selectedEcho] == 'playing');
-
+    final a = _active;
+    if (a == null) return;
+    final pos = (a.position as num?)?.toInt() ?? 0;
+    final updatedAt = a.positionUpdated;
+    final isPlaying = _getEffPlaying(a.entity);
     int newPos = pos;
-    if (updatedAt != null && playing) {
+    if (updatedAt != null && isPlaying) {
       final t = DateTime.tryParse(updatedAt);
-      if (t != null) newPos = (pos + DateTime.now().difference(t).inSeconds).clamp(0, _nowDuration ?? 99999);
+      if (t != null) newPos = (pos + DateTime.now().difference(t).inSeconds).clamp(0, (a.duration?.toInt() ?? 99999));
     }
-    if (track != _lastTrack) {
-      _livePosition = newPos;
-      _lastTrack = track;
-    } else if (newPos >= _livePosition || (newPos - _livePosition).abs() > 5) {
-      _livePosition = newPos;
-    }
+    _livePos = newPos;
   }
 
   void _tick() {
-    final playing = _spotifyMatchesSelected ? _isPlaying : (_deviceStates[_selectedEcho] == 'playing');
-    if (playing && _nowDuration != null && _livePosition < _nowDuration!) {
-      setState(() => _livePosition++);
+    final a = _active;
+    if (a == null) return;
+    if (_getEffPlaying(a.entity) && a.duration != null && _livePos < a.duration!.toInt()) {
+      setState(() => _livePos++);
     }
   }
-
-  // ─── Spotify state helpers ───
-  Map<String, dynamic> get _spotifyAttrs => _deviceAttrs[HAService.spotifyEntity] ?? {};
-  String get _spotifyState => _deviceStates[HAService.spotifyEntity] ?? 'idle';
-  String get _spotifySource => _spotifyAttrs['source']?.toString() ?? '';
-  bool get _isPlaying => _spotifyState == 'playing';
-  bool get _isPaused => _spotifyState == 'paused';
-
-  // Does the Spotify entity's source match the selected Echo?
-  String get _selectedEchoName => _SPOTIFY_SOURCES[_selectedEcho] ?? _ECHOS.firstWhere((e) => e.$1 == _selectedEcho, orElse: () => ('', '')).$2;
-  bool get _spotifyMatchesSelected => _spotifySource == _selectedEchoName;
-
-  // Now playing — show Spotify info ONLY if source matches selected Echo
-  // This way switching Echo shows the correct track (or "Not Playing" if Spotify wasn't last on that Echo)
-  String? get _nowTitle {
-    if (_spotifyMatchesSelected) return _spotifyAttrs['media_title']?.toString();
-    return _deviceAttrs[_selectedEcho]?['media_title']?.toString();
-  }
-  String? get _nowArtist {
-    if (_spotifyMatchesSelected) return _spotifyAttrs['media_artist']?.toString();
-    return _deviceAttrs[_selectedEcho]?['media_artist']?.toString();
-  }
-  String? get _nowArt {
-    if (_spotifyMatchesSelected) return _spotifyAttrs['entity_picture']?.toString();
-    return _deviceAttrs[_selectedEcho]?['entity_picture']?.toString();
-  }
-  int? get _nowDuration {
-    if (_spotifyMatchesSelected) return (_spotifyAttrs['media_duration'] as num?)?.toInt();
-    return (_deviceAttrs[_selectedEcho]?['media_duration'] as num?)?.toInt();
-  }
-  double get _nowVol => (_isPlaying || _isPaused)
-    ? ((_spotifyAttrs['volume_level'] as num?)?.toDouble() ?? 0.3)
-    : ((_deviceAttrs[_selectedEcho]?['volume_level'] as num?)?.toDouble() ?? 0.3);
 
   // ─── Search ───
   void _onSearch(String query) {
@@ -185,26 +182,27 @@ class _MusicPageState extends State<MusicPage> {
       try {
         final r = await SpotifyService.search(query);
         if (mounted) setState(() { _results = r; _searching = false; });
-      } catch (e) {
-        if (mounted) setState(() => _searching = false);
-      }
+      } catch (_) { if (mounted) setState(() => _searching = false); }
     });
   }
 
-  // ─── Play a track ───
+  // ─── Play a track — matches PWA playUri exactly ───
   Future<void> _playTrack(SpotifyTrack track) async {
+    if (_sel == null) return;
     HapticFeedback.mediumImpact();
-    setState(() => _playingUri = track.uri);
-    final source = _SPOTIFY_SOURCES[_selectedEcho];
+    setState(() { _playingUri = track.uri; _optPlay[_sel!] = true; });
+    final src = _SPOTIFY_SOURCES[_sel!];
     try {
-      if (source != null) {
-        await HAService.playSpotify(track.uri, source);
+      if (track.uri.startsWith('spotify:') && src != null) {
+        // PWA: fetch("/api/ha/play-spotify", {uri, source})
+        await HAService.playSpotify(track.uri, src);
       } else {
+        // PWA: svc("media_player","play_media",{entity_id:curSel,...})
         await HAService.callService('media_player', 'play_media', {
-          'entity_id': _selectedEcho, 'media_content_id': track.uri, 'media_content_type': 'music'});
+          'entity_id': _sel!, 'media_content_id': track.uri, 'media_content_type': 'music'});
       }
       if (mounted) {
-        final name = _ECHOS.firstWhere((e) => e.$1 == _selectedEcho).$2;
+        final name = _ECHOS.firstWhere((e) => e.$1 == _sel).$2;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('▶ ${track.name} → $name'), backgroundColor: const Color(0xFF1C1C1E), duration: const Duration(seconds: 2)));
       }
@@ -214,64 +212,62 @@ class _MusicPageState extends State<MusicPage> {
     if (mounted) setState(() => _playingUri = null);
   }
 
-  // ─── Controls — ALWAYS target the selected Echo entity ───
-  // This is how the PWA does it. The Echo forwards to Spotify/Amazon/etc internally.
-  // Only use Spotify entity for seek (which Echo doesn't support) and play_media (initial playback).
+  // ─── Controls — ALL target active.entity (the selected Echo) — matches PWA EXACTLY ───
+  void _togglePlay() {
+    final a = _active; if (a == null) return;
+    final cur = _getEffPlaying(a.entity);
+    setState(() => _optPlay[a.entity] = !cur);
+    // PWA: svc("media_player","media_play_pause",{entity_id:entity})
+    HAService.callService('media_player', 'media_play_pause', {'entity_id': a.entity});
+  }
 
-  void _play() {
-    setState(() {
-      _deviceStates[_selectedEcho] = (_deviceStates[_selectedEcho] == 'playing') ? 'paused' : 'playing';
-      if (_spotifyMatchesSelected) {
-        _deviceStates[HAService.spotifyEntity] = _isPlaying ? 'paused' : 'playing';
-      }
-    });
-    // Always target the Echo — HA handles routing to Spotify internally
-    HAService.callService('media_player', 'media_play_pause', {'entity_id': _selectedEcho});
-  }
   void _stop() {
-    setState(() { _deviceStates[_selectedEcho] = 'idle'; _deviceStates[HAService.spotifyEntity] = 'idle'; _livePosition = 0; });
-    HAService.callService('media_player', 'media_stop', {'entity_id': _selectedEcho});
+    final a = _active; if (a == null) return;
+    setState(() { _optPlay[a.entity] = false; _livePos = 0; });
+    // PWA: svc("media_player","media_stop",{entity_id:entity})
+    HAService.callService('media_player', 'media_stop', {'entity_id': a.entity});
   }
+
   void _next() {
-    setState(() => _livePosition = 0);
-    HAService.callService('media_player', 'media_next_track', {'entity_id': _selectedEcho});
+    final a = _active; if (a == null) return;
+    setState(() => _livePos = 0);
+    // PWA: svc("media_player","media_next_track",{entity_id:active.entity})
+    HAService.callService('media_player', 'media_next_track', {'entity_id': a.entity});
   }
+
   void _prev() {
-    final wasPos = _livePosition;
-    setState(() => _livePosition = 0);
-    if (_spotifyMatchesSelected && wasPos > 3) {
-      // Seek to beginning — only works on Spotify entity, not Echo
-      HAService.callService('media_player', 'media_seek', {'entity_id': HAService.spotifyEntity, 'seek_position': 0});
+    final a = _active; if (a == null) return;
+    // PWA: if(livePos>3) media_seek else media_previous_track — BOTH on active.entity
+    if (_livePos > 3) {
+      setState(() => _livePos = 0);
+      HAService.callService('media_player', 'media_seek', {'entity_id': a.entity, 'seek_position': 0});
     } else {
-      HAService.callService('media_player', 'media_previous_track', {'entity_id': _selectedEcho});
+      setState(() => _livePos = 0);
+      HAService.callService('media_player', 'media_previous_track', {'entity_id': a.entity});
     }
   }
 
-  // ─── Volume — anti-bounce pattern ───
-  void _volChanged(double v) {
-    setState(() { _localVol = v; _volLocked = true; _committedVol = v; });
-  }
-  void _volCommit(double v) {
-    setState(() { _localVol = null; _committedVol = v; _volLocked = true; });
-    _deviceAttrs[_selectedEcho] = {...(_deviceAttrs[_selectedEcho] ?? {}), 'volume_level': v};
-    if (_spotifyMatchesSelected) _deviceAttrs[HAService.spotifyEntity] = {..._spotifyAttrs, 'volume_level': v};
-    // Target the Echo entity — same as PWA
-    HAService.callService('media_player', 'volume_set', {'entity_id': _selectedEcho, 'volume_level': v});
-    _volLockTimer?.cancel();
-    _volLockTimer = Timer(const Duration(seconds: 5), () {
-      if (mounted) setState(() { _volLocked = false; _committedVol = null; });
-    });
+  // ─── Volume — matches PWA: localVol on drag, commit on release, entity_id: active.entity ───
+  void _volChanged(int v) { setState(() => _localVol = v); }
+  void _volCommit(int v) {
+    final a = _active; if (a == null) return;
+    setState(() => _localVol = v);
+    // PWA: svc("media_player","volume_set",{entity_id:active.entity,volume_level:v/100})
+    HAService.callService('media_player', 'volume_set', {'entity_id': a.entity, 'volume_level': v / 100});
   }
 
   @override
   Widget build(BuildContext context) {
-    final displayVol = _localVol ?? _nowVol;
+    final a = _active;
+    final isPlaying = a != null && _getEffPlaying(a.entity);
+    final displayVol = _localVol ?? a?.vol ?? 30;
+    final dur = a?.duration?.toInt();
+
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0D),
       body: SafeArea(child: Center(child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 520),
         child: Column(children: [
-          // Header
           Padding(padding: const EdgeInsets.fromLTRB(20, 16, 20, 0), child: Row(children: [
             GestureDetector(onTap: () { if (Navigator.canPop(context)) Navigator.pop(context); },
               child: Icon(PhosphorIcons.caretLeft(PhosphorIconsStyle.light), size: 20, color: SmithMkColors.textTertiary)),
@@ -281,8 +277,6 @@ class _MusicPageState extends State<MusicPage> {
             const Text('Music', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
           ])),
           const SizedBox(height: 14),
-
-          // Scrollable content
           Expanded(child: ListView(padding: const EdgeInsets.symmetric(horizontal: 16), physics: const BouncingScrollPhysics(), children: [
 
             // ─── DEVICES ───
@@ -300,36 +294,35 @@ class _MusicPageState extends State<MusicPage> {
               Row(children: [
                 Container(width: 64, height: 64, decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), color: const Color(0xFF111111)),
                   clipBehavior: Clip.antiAlias,
-                  child: _nowArt != null
-                    ? Image.network(_nowArt!.startsWith('http') ? _nowArt! : '${HAService.haDirectUrl}$_nowArt',
+                  child: a?.art != null
+                    ? Image.network(a!.art!.startsWith('http') ? a.art! : '${HAService.haDirectUrl}${a.art}',
                         fit: BoxFit.cover, filterQuality: FilterQuality.high, errorBuilder: (_, __, ___) => _artIcon())
                     : _artIcon()),
                 const SizedBox(width: 14),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(_nowTitle ?? 'Not Playing', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 2),
-                  Text(_nowArtist ?? 'Search or pick a track', style: const TextStyle(fontSize: 12, color: Color(0xBFFF9900)), overflow: TextOverflow.ellipsis),
+                  Text(a?.title ?? (isPlaying ? 'Playing…' : a?.state == 'paused' ? 'Paused' : 'Idle'),
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+                  if (a?.artist != null) ...[const SizedBox(height: 2),
+                    Text(a!.artist!, style: const TextStyle(fontSize: 12, color: Color(0xBFFF9900)), overflow: TextOverflow.ellipsis)],
                   const SizedBox(height: 4),
-                  Text('🔊 ${_ECHOS.firstWhere((e) => e.$1 == _selectedEcho).$2}',
-                    style: const TextStyle(fontSize: 10, color: Color(0x33FFFFFF))),
+                  Text('🔊 ${a?.name ?? '—'}', style: const TextStyle(fontSize: 10, color: Color(0x33FFFFFF))),
                 ])),
               ]),
-              if (_nowDuration != null && _nowDuration! > 0) ...[
-                const SizedBox(height: 12),
-                _progressBar(_livePosition, _nowDuration!),
-              ],
+              if (dur != null && dur > 0) ...[const SizedBox(height: 12), _progressBar(_livePos, dur)],
               const SizedBox(height: 12),
-              // Controls
+              // Transport
               Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                _ctrlBtn(PhosphorIcons.shuffle(PhosphorIconsStyle.bold), () {}),
-                const SizedBox(width: 10),
                 _ctrlBtn(PhosphorIcons.skipBack(PhosphorIconsStyle.fill), _prev),
                 const SizedBox(width: 10),
-                _playPauseBtn(),
+                _playPauseBtn(isPlaying),
+                const SizedBox(width: 10),
+                _ctrlBtn(PhosphorIcons.skipForward(PhosphorIconsStyle.fill), _next),
                 const SizedBox(width: 10),
                 _ctrlBtn(PhosphorIcons.stop(PhosphorIconsStyle.fill), _stop),
                 const SizedBox(width: 10),
-                _ctrlBtn(PhosphorIcons.skipForward(PhosphorIconsStyle.fill), _next),
+                _ctrlBtn(PhosphorIcons.shuffle(PhosphorIconsStyle.bold), () {
+                  if (a != null) HAService.callService('media_player', 'shuffle_set', {'entity_id': a.entity, 'shuffle': !(a.shuffle ?? false)});
+                }),
               ]),
               const SizedBox(height: 12),
               // Volume
@@ -340,9 +333,13 @@ class _MusicPageState extends State<MusicPage> {
                   data: SliderThemeData(trackHeight: 4, thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
                     activeTrackColor: const Color(0xFFFF9900), inactiveTrackColor: const Color(0x14FFFFFF),
                     thumbColor: const Color(0xFFFF9900), overlayColor: const Color(0x1AFF9900)),
-                  child: Slider(value: displayVol.clamp(0.0, 1.0), onChanged: _volChanged, onChangeEnd: _volCommit))),
+                  child: Slider(
+                    value: displayVol.toDouble().clamp(0, 100),
+                    min: 0, max: 100,
+                    onChanged: (v) => _volChanged(v.round()),
+                    onChangeEnd: (v) => _volCommit(v.round())))),
                 const SizedBox(width: 8),
-                Text('${(displayVol * 100).round()}%', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0x40FFFFFF))),
+                Text('$displayVol%', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0x40FFFFFF))),
               ]),
             ])),
             const SizedBox(height: 12),
@@ -391,18 +388,16 @@ class _MusicPageState extends State<MusicPage> {
   Widget _card({required Widget child}) => Container(padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(color: const Color(0xFF1C1C1E), borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0x14FFC107))),
     child: child);
-
   Widget _label(String t) => Padding(padding: const EdgeInsets.only(bottom: 12),
     child: Text(t, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1.7, color: Color(0x80FFC107))));
 
   Widget _deviceChip(String entityId, String name) {
-    final sel = entityId == _selectedEcho;
-    final state = _deviceStates[entityId] ?? 'unavailable';
-    final online = state != 'unavailable';
-    final isSpotifyTarget = _spotifySource == (_SPOTIFY_SOURCES[entityId] ?? '');
-    final playing = isSpotifyTarget && _isPlaying;
+    final sel = entityId == _sel;
+    final playing = _getEffPlaying(entityId);
+    final dev = _devs.firstWhere((d) => d.entity == entityId, orElse: () => _Dev(entity: entityId, name: name, state: 'unavailable'));
+    final online = dev.state != 'unavailable';
     return GestureDetector(
-      onTap: () { HapticFeedback.lightImpact(); setState(() { _selectedEcho = entityId; _livePosition = 0; }); _syncPosition(); },
+      onTap: () { HapticFeedback.lightImpact(); setState(() { _sel = entityId; _localVol = null; _livePos = 0; }); _syncPosition(); },
       child: AnimatedContainer(duration: const Duration(milliseconds: 100),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         decoration: BoxDecoration(borderRadius: BorderRadius.circular(10),
@@ -413,15 +408,14 @@ class _MusicPageState extends State<MusicPage> {
             color: playing ? const Color(0xFFFF9900) : online ? const Color(0xFF4ADE80) : const Color(0xFF555555),
             boxShadow: [if (online) BoxShadow(color: playing ? const Color(0x66FF9900) : const Color(0x664ADE80), blurRadius: 4)])),
           const SizedBox(width: 6),
-          Text(name, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
-            color: sel ? const Color(0xE6FFFFFF) : const Color(0x66FFFFFF))),
+          Text(name, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: sel ? const Color(0xE6FFFFFF) : const Color(0x66FFFFFF))),
         ])));
   }
 
   Widget _progressBar(int pos, int dur) {
     final frac = dur > 0 ? (pos / dur).clamp(0.0, 1.0) : 0.0;
     return Column(children: [
-      SizedBox(height: 6, child: LayoutBuilder(builder: (ctx, c) => Stack(children: [
+      SizedBox(height: 6, child: LayoutBuilder(builder: (_, c) => Stack(children: [
         Container(height: 6, decoration: BoxDecoration(borderRadius: BorderRadius.circular(3), color: const Color(0x14FFFFFF))),
         Container(height: 6, width: c.maxWidth * frac, decoration: BoxDecoration(borderRadius: BorderRadius.circular(3), color: const Color(0xFFFF9900))),
       ]))),
@@ -443,11 +437,11 @@ class _MusicPageState extends State<MusicPage> {
       border: Border.all(color: p ? const Color(0xCCFFC107) : const Color(0x17FFFFFF))),
       child: Icon(icon, size: 16, color: p ? Colors.white : const Color(0x99FFFFFF))));
 
-  Widget _playPauseBtn() => _Pressable(onTap: () { HapticFeedback.mediumImpact(); _play(); },
+  Widget _playPauseBtn(bool isPlaying) => _Pressable(onTap: () { HapticFeedback.mediumImpact(); _togglePlay(); },
     builder: (p) => Container(width: 50, height: 50, decoration: BoxDecoration(borderRadius: BorderRadius.circular(14),
       color: p ? const Color(0x8CFF9900) : const Color(0x1FFF9900),
       border: Border.all(color: p ? const Color(0xCCFF9900) : const Color(0x59FF9900))),
-      child: Icon(_isPlaying ? PhosphorIcons.pause(PhosphorIconsStyle.fill) : PhosphorIcons.play(PhosphorIconsStyle.fill),
+      child: Icon(isPlaying ? PhosphorIcons.pause(PhosphorIconsStyle.fill) : PhosphorIcons.play(PhosphorIconsStyle.fill),
         size: 20, color: p ? Colors.white : const Color(0xFFFF9900))));
 
   Widget _tabBtn(String l, bool a) => Expanded(child: Container(padding: const EdgeInsets.symmetric(vertical: 11),
