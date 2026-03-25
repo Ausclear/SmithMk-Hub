@@ -39,6 +39,8 @@ class _MusicPageState extends State<MusicPage> {
   // Auth
   bool _loggedIn = false;
   bool _loggingIn = false;
+  bool _showCodeInput = false;
+  final _codeCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -49,6 +51,7 @@ class _MusicPageState extends State<MusicPage> {
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _codeCtrl.dispose();
     _debounce?.cancel();
     _pollTimer?.cancel();
     _tickTimer?.cancel();
@@ -124,11 +127,24 @@ class _MusicPageState extends State<MusicPage> {
   }
 
   Future<void> _login() async {
+    // Open Spotify login in a new tab
+    html.window.open(SpotifyAuth.getLoginUrl(), '_blank');
+    // Show code input
+    setState(() => _showCodeInput = true);
+  }
+
+  Future<void> _submitCode() async {
+    final code = _codeCtrl.text.trim();
+    if (code.isEmpty) return;
     setState(() => _loggingIn = true);
-    final ok = await SpotifyAuth.login();
+    final ok = await SpotifyAuth.exchangeCode(code);
     if (mounted) {
-      setState(() { _loggedIn = ok; _loggingIn = false; });
-      if (ok) _startPolling();
+      setState(() { _loggedIn = ok; _loggingIn = false; _showCodeInput = false; });
+      if (ok) {
+        _startPolling();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid code — try again')));
+      }
     }
   }
 
@@ -237,21 +253,42 @@ class _MusicPageState extends State<MusicPage> {
           const SizedBox(height: 14),
 
           if (!_loggedIn) ...[
-            Expanded(child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Expanded(child: Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
               Icon(PhosphorIcons.spotifyLogo(PhosphorIconsStyle.fill), size: 48, color: const Color(0xFF1DB954)),
               const SizedBox(height: 16),
               const Text('Connect Spotify', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               const Text('Login to control music on your Echo devices', style: TextStyle(fontSize: 13, color: Color(0x66FFFFFF))),
               const SizedBox(height: 24),
-              _Pressable(onTap: _loggingIn ? () {} : _login, builder: (p) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                decoration: BoxDecoration(borderRadius: BorderRadius.circular(30),
-                  color: p ? const Color(0xFF169C46) : const Color(0xFF1DB954)),
-                child: _loggingIn
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Login with Spotify', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)))),
-            ]))),
+              if (!_showCodeInput) ...[
+                _Pressable(onTap: _login, builder: (p) => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(30),
+                    color: p ? const Color(0xFF169C46) : const Color(0xFF1DB954)),
+                  child: const Text('Login with Spotify', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)))),
+              ] else ...[
+                const Text('After logging in, copy the code from the URL bar:', style: TextStyle(fontSize: 12, color: Color(0x66FFFFFF))),
+                const SizedBox(height: 4),
+                const Text('The URL will look like: open.spotify.com/?code=XXXXXX', style: TextStyle(fontSize: 11, color: Color(0x40FFFFFF))),
+                const SizedBox(height: 4),
+                const Text('Copy everything after "code=" and paste below:', style: TextStyle(fontSize: 12, color: Color(0x66FFFFFF))),
+                const SizedBox(height: 12),
+                Container(decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: const Color(0x0FFFFFFF),
+                  border: Border.all(color: const Color(0x1AFFFFFF))),
+                  child: TextField(controller: _codeCtrl,
+                    style: const TextStyle(fontSize: 13, color: Color(0xE6FFFFFF)),
+                    decoration: const InputDecoration(hintText: 'Paste code here…', hintStyle: TextStyle(color: Color(0x40FFFFFF)),
+                      border: InputBorder.none, contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 13)))),
+                const SizedBox(height: 12),
+                _Pressable(onTap: _loggingIn ? () {} : _submitCode, builder: (p) => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(30),
+                    color: p ? const Color(0xFF169C46) : const Color(0xFF1DB954)),
+                  child: _loggingIn
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Text('Connect', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)))),
+              ],
+            ])))),
           ] else ...[
             Expanded(child: ListView(padding: const EdgeInsets.symmetric(horizontal: 16), physics: const BouncingScrollPhysics(), children: [
 
