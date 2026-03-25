@@ -260,16 +260,16 @@ class _MusicPageState extends State<MusicPage> {
           child: Icon(PhosphorIcons.caretLeft(PhosphorIconsStyle.bold), size: 16, color: Colors.white54)),
         const SizedBox(width: 12),
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('MEDIA · MUSIC', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.8, color: _gold.withValues(alpha: 0.7))),
+          Text('MEDIA · MUSIC', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.8, color: _gold.withOpacity(0.7))),
           const SizedBox(height: 2),
           const Text('Music', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
         ]),
         const Spacer(),
         if (_devs.any((d) => _getEffPlaying(d.entity)))
           Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7), decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20), color: _amber.withValues(alpha: 0.1),
-            border: Border.all(color: _amber.withValues(alpha: 0.25)),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2))]),
+            borderRadius: BorderRadius.circular(20), color: _amber.withOpacity(0.1),
+            border: Border.all(color: _amber.withOpacity(0.25)),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 2))]),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Container(width: 7, height: 7, decoration: BoxDecoration(shape: BoxShape.circle, color: _amber, boxShadow: [BoxShadow(color: _amber, blurRadius: 8)])),
               const SizedBox(width: 6),
@@ -309,15 +309,15 @@ class _MusicPageState extends State<MusicPage> {
       Row(children: [
         // Album art
         Container(width: 80, height: 80, decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), color: const Color(0xFF111111),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 16, offset: const Offset(6, 6)),
-            BoxShadow(color: Colors.white.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(-2, -2))]),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 16, offset: const Offset(6, 6)),
+            BoxShadow(color: Colors.white.withOpacity(0.02), blurRadius: 8, offset: const Offset(-2, -2))]),
           clipBehavior: Clip.antiAlias,
           child: a?.art != null
             ? Image.network(a!.art!.startsWith('http') ? a.art! : '${HAService.haDirectUrl}${a.art}', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _artPlaceholder())
             : _artPlaceholder()),
         const SizedBox(width: 14),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(a?.name.toUpperCase() ?? '', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: _amber.withValues(alpha: 0.6))),
+          Text(a?.name.toUpperCase() ?? '', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: _amber.withOpacity(0.6))),
           const SizedBox(height: 5),
           Text(a?.title ?? (isPlaying ? 'Playing…' : a?.state == 'paused' ? 'Paused' : 'Idle'),
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xF2FFFFFF)), overflow: TextOverflow.ellipsis),
@@ -352,7 +352,7 @@ class _MusicPageState extends State<MusicPage> {
         Expanded(child: Column(children: [
           SizedBox(height: 36, child: SliderTheme(data: SliderThemeData(trackHeight: 4, thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 9),
             activeTrackColor: _amber, inactiveTrackColor: const Color(0x0FFFFFFF), thumbColor: _amber,
-            overlayColor: _amber.withValues(alpha: 0.1)),
+            overlayColor: _amber.withOpacity(0.1)),
             child: Slider(value: displayVol.toDouble().clamp(0, 100), min: 0, max: 100,
               onChanged: (v) => _volChanged(v.round()), onChangeEnd: (v) => _volCommit(v.round())))),
           Text('$displayVol%', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0x40FFFFFF), letterSpacing: 0.6)),
@@ -381,11 +381,11 @@ class _MusicPageState extends State<MusicPage> {
       onTap: () { HapticFeedback.lightImpact(); setState(() { _sel = d.entity; _localVol = null; _volLocked = false; _livePos = 0; }); _syncPosition(); },
       child: Container(margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), color: _card,
-          border: Border.all(color: isSel ? _amber.withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.04)),
+          border: Border.all(color: isSel ? _amber.withOpacity(0.15) : Colors.white.withOpacity(0.04)),
           gradient: isSel ? LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [const Color(0xFF2A2210), const Color(0xFF1E1A0E)]) : null,
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 10, offset: const Offset(4, 4)),
-            BoxShadow(color: Colors.white.withValues(alpha: 0.01), blurRadius: 6, offset: const Offset(-2, -2)),
-            if (isSel) BoxShadow(color: _amber.withValues(alpha: 0.02), blurRadius: 6, offset: const Offset(-2, -2))]),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 10, offset: const Offset(4, 4)),
+            BoxShadow(color: Colors.white.withOpacity(0.01), blurRadius: 6, offset: const Offset(-2, -2)),
+            if (isSel) BoxShadow(color: _amber.withOpacity(0.02), blurRadius: 6, offset: const Offset(-2, -2))]),
         child: Row(children: [
           // Icon
           Container(width: 36, height: 36, decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), color: const Color(0xFF161616),
@@ -396,7 +396,7 @@ class _MusicPageState extends State<MusicPage> {
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(d.name, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isSel ? const Color(0xEBFFFFFF) : Colors.white54)),
             const SizedBox(height: 2),
-            if (d.title != null) Text('${d.artist ?? ''} · ${d.title}', style: TextStyle(fontSize: 11, color: _amber.withValues(alpha: 0.7)), overflow: TextOverflow.ellipsis)
+            if (d.title != null) Text('${d.artist ?? ''} · ${d.title}', style: TextStyle(fontSize: 11, color: _amber.withOpacity(0.7)), overflow: TextOverflow.ellipsis)
             else Text(d.state, style: const TextStyle(fontSize: 11, color: Color(0x26FFFFFF))),
           ])),
           _NeuBtn(w: 34, h: 34, amber: isPlaying, onTap: () { HapticFeedback.mediumImpact(); _togglePlay(d.entity); },
@@ -438,7 +438,7 @@ class _MusicPageState extends State<MusicPage> {
       Container(decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), color: const Color(0xFF161616),
         boxShadow: [const BoxShadow(color: Color(0x66000000), blurRadius: 8, offset: Offset(3, 3)),
           const BoxShadow(color: Color(0x05FFFFFF), blurRadius: 3, offset: Offset(-1, -1))],
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05))),
+        border: Border.all(color: Colors.white.withOpacity(0.05))),
         child: TextField(controller: _searchCtrl, onChanged: _onSearch,
           style: const TextStyle(fontSize: 14, color: Color(0xE6FFFFFF)),
           decoration: InputDecoration(hintText: 'Search artists, songs, albums…', hintStyle: const TextStyle(color: Color(0x33FFFFFF)),
@@ -457,11 +457,11 @@ class _MusicPageState extends State<MusicPage> {
   Widget _buildBottomBar(_Dev a, bool isPlaying) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(color: _card, border: Border(top: BorderSide(color: _amber.withValues(alpha: 0.1))),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 20, offset: const Offset(0, -4))]),
+      decoration: BoxDecoration(color: _card, border: Border(top: BorderSide(color: _amber.withOpacity(0.1))),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 20, offset: const Offset(0, -4))]),
       child: Row(children: [
         Container(width: 42, height: 42, decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), color: const Color(0xFF111111),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 8, offset: const Offset(3, 3))]),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 8, offset: const Offset(3, 3))]),
           clipBehavior: Clip.antiAlias,
           child: a.art != null
             ? Image.network(a.art!.startsWith('http') ? a.art! : '${HAService.haDirectUrl}${a.art}', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _artPlaceholder())
@@ -501,10 +501,10 @@ class _MusicPageState extends State<MusicPage> {
   Widget _artPlaceholder() => Container(color: const Color(0xFF111111), child: Center(child: Icon(PhosphorIcons.vinylRecord(PhosphorIconsStyle.light), size: 24, color: const Color(0xFF333333))));
 
   Widget _svcBtn(String l, Color c, bool active) => Expanded(child: Container(padding: const EdgeInsets.symmetric(vertical: 10),
-    decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: active ? c.withValues(alpha: 0.12) : _card,
-      border: Border.all(color: active ? c.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.04)),
-      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 8, offset: const Offset(3, 3)),
-        BoxShadow(color: Colors.white.withValues(alpha: 0.01), blurRadius: 4, offset: const Offset(-1, -1))]),
+    decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: active ? c.withOpacity(0.12) : _card,
+      border: Border.all(color: active ? c.withOpacity(0.3) : Colors.white.withOpacity(0.04)),
+      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 8, offset: const Offset(3, 3)),
+        BoxShadow(color: Colors.white.withOpacity(0.01), blurRadius: 4, offset: const Offset(-1, -1))]),
     child: Text(l, textAlign: TextAlign.center, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: active ? c : const Color(0x4DFFFFFF)))));
 
   Widget _trackRow(SpotifyTrack track) {
@@ -512,8 +512,8 @@ class _MusicPageState extends State<MusicPage> {
     return GestureDetector(onTap: () => _playTrack(track), child: Container(
       margin: const EdgeInsets.only(bottom: 6), padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: _card,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(3, 3))]),
+        border: Border.all(color: Colors.white.withOpacity(0.04)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 8, offset: const Offset(3, 3))]),
       child: Row(children: [
         Container(width: 42, height: 42, decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), color: const Color(0xFF1A1A1A)),
           clipBehavior: Clip.antiAlias,
@@ -541,9 +541,9 @@ class _NeuCard extends StatelessWidget {
     margin: const EdgeInsets.only(bottom: 14),
     padding: const EdgeInsets.all(18),
     decoration: BoxDecoration(color: const Color(0xFF1E1E1E), borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
-      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 24, offset: const Offset(8, 8)),
-        BoxShadow(color: Colors.white.withValues(alpha: 0.02), blurRadius: 12, offset: const Offset(-4, -4))]),
+      border: Border.all(color: Colors.white.withOpacity(0.04)),
+      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.6), blurRadius: 24, offset: const Offset(8, 8)),
+        BoxShadow(color: Colors.white.withOpacity(0.02), blurRadius: 12, offset: const Offset(-4, -4))]),
     child: child);
 }
 
@@ -568,12 +568,12 @@ class _NeuBtnState extends State<_NeuBtn> {
       width: widget.w, height: widget.h,
       decoration: BoxDecoration(borderRadius: BorderRadius.circular(14),
         color: _pressed ? (widget.amber ? const Color(0xFF1A1608) : const Color(0xFF1A1A1A)) : const Color(0xFF1E1E1E),
-        border: Border.all(color: widget.amber ? const Color(0x33FFB300) : Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: widget.amber ? const Color(0x33FFB300) : Colors.white.withOpacity(0.05)),
         gradient: widget.amber && !_pressed ? const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF2A2210), Color(0xFF1E1A0E)]) : null,
         boxShadow: _pressed
           ? [const BoxShadow(color: Color(0x99000000), blurRadius: 8, offset: Offset(3, 3), spreadRadius: -2)]
-          : [BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 10, offset: const Offset(4, 4)),
-             BoxShadow(color: Colors.white.withValues(alpha: 0.015), blurRadius: 6, offset: const Offset(-2, -2)),
-             if (widget.amber) BoxShadow(color: const Color(0xFFFFB300).withValues(alpha: 0.03), blurRadius: 6, offset: const Offset(-2, -2))]),
+          : [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 10, offset: const Offset(4, 4)),
+             BoxShadow(color: Colors.white.withOpacity(0.015), blurRadius: 6, offset: const Offset(-2, -2)),
+             if (widget.amber) BoxShadow(color: const Color(0xFFFFB300).withOpacity(0.03), blurRadius: 6, offset: const Offset(-2, -2))]),
       child: Center(child: widget.child)));
 }
