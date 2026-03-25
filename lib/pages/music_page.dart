@@ -154,7 +154,9 @@ class _MusicPageState extends State<MusicPage> {
   String? get _nowArtist => _spotifyAttrs['media_artist']?.toString();
   String? get _nowArt => _spotifyAttrs['entity_picture']?.toString();
   int? get _nowDuration => (_spotifyAttrs['media_duration'] as num?)?.toInt();
-  double get _nowVol => (_spotifyAttrs['volume_level'] as num?)?.toDouble() ?? 0.3;
+  double get _nowVol => (_isPlaying || _isPaused)
+    ? ((_spotifyAttrs['volume_level'] as num?)?.toDouble() ?? 0.3)
+    : ((_deviceAttrs[_selectedEcho]?['volume_level'] as num?)?.toDouble() ?? 0.3);
 
   // ─── Search ───
   void _onSearch(String query) {
@@ -194,22 +196,30 @@ class _MusicPageState extends State<MusicPage> {
     if (mounted) setState(() => _playingUri = null);
   }
 
-  // ─── Controls — ALL target Spotify entity ───
+  // ─── Controls — Spotify entity when active, Echo entity when idle ───
+  String get _controlTarget => (_isPlaying || _isPaused) ? HAService.spotifyEntity : _selectedEcho;
+
   void _play() {
-    setState(() { _deviceStates[HAService.spotifyEntity] = _isPlaying ? 'paused' : 'playing'; });
-    HAService.musicPlayPause();
+    setState(() {
+      if (_isPlaying || _isPaused) {
+        _deviceStates[HAService.spotifyEntity] = _isPlaying ? 'paused' : 'playing';
+      } else {
+        _deviceStates[_selectedEcho] = 'playing';
+      }
+    });
+    HAService.callService('media_player', 'media_play_pause', {'entity_id': _controlTarget});
   }
   void _stop() {
-    setState(() { _deviceStates[HAService.spotifyEntity] = 'idle'; _livePosition = 0; });
-    HAService.musicStop();
+    setState(() { _deviceStates[HAService.spotifyEntity] = 'idle'; _deviceStates[_selectedEcho] = 'idle'; _livePosition = 0; });
+    HAService.callService('media_player', 'media_stop', {'entity_id': _controlTarget});
   }
   void _next() {
     setState(() => _livePosition = 0);
-    HAService.musicNext();
+    HAService.callService('media_player', 'media_next_track', {'entity_id': _controlTarget});
   }
   void _prev() {
     setState(() => _livePosition = 0);
-    HAService.musicPrev();
+    HAService.callService('media_player', 'media_previous_track', {'entity_id': _controlTarget});
   }
 
   // ─── Volume — anti-bounce pattern ───
@@ -218,9 +228,10 @@ class _MusicPageState extends State<MusicPage> {
   }
   void _volCommit(double v) {
     setState(() { _localVol = null; _committedVol = v; _volLocked = true; });
-    // Force the attrs to our value immediately
     _deviceAttrs[HAService.spotifyEntity] = {..._spotifyAttrs, 'volume_level': v};
-    HAService.musicVolume(v);
+    _deviceAttrs[_selectedEcho] = {...(_deviceAttrs[_selectedEcho] ?? {}), 'volume_level': v};
+    // Target whichever entity is active
+    HAService.callService('media_player', 'volume_set', {'entity_id': _controlTarget, 'volume_level': v});
     _volLockTimer?.cancel();
     _volLockTimer = Timer(const Duration(seconds: 5), () {
       if (mounted) setState(() { _volLocked = false; _committedVol = null; });
