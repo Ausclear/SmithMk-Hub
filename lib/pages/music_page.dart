@@ -81,74 +81,95 @@ class _MusicPageState extends State<MusicPage> {
     return _devs.any((d) => d.entity == entity && d.state == 'playing');
   }
 
+  // Raw state from HA — updated by WebSocket in place
+  Map<String, String> _rawStates = {};
+  Map<String, Map<String, dynamic>> _rawAttrs = {};
+
   @override
   void initState() {
     super.initState();
-    _loadState();
+    _loadState(); // ONE initial REST fetch
     HAService.connect();
-    _wsSub = HAService.stateStream.listen((_) => _loadState()); // Rebuild on any state change
+    _wsSub = HAService.stateStream.listen(_onWsEvent); // Update in place
     _tickTimer = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
   }
 
   @override
   void dispose() { _searchCtrl.dispose(); _debounce?.cancel(); _tickTimer?.cancel(); _wsSub?.cancel(); super.dispose(); }
 
-  /// Build device list — EXACT copy of PWA poll() logic
+  /// Handle individual WebSocket state_changed event — NO REST calls
+  void _onWsEvent(Map<String, dynamic> data) {
+    final entityId = data['entity_id'] as String?;
+    if (entityId == null || !mounted) return;
+    _rawStates[entityId] = data['state'] as String? ?? 'idle';
+    _rawAttrs[entityId] = Map<String, dynamic>.from(data['attributes'] ?? {});
+    _rebuildDevs();
+  }
+
+  /// ONE initial REST fetch — populates raw state, then builds device list
   Future<void> _loadState() async {
     try {
       final all = await HAService.getEntities('media_player');
-      final spEnt = all.firstWhere((e) => e['entity_id'] == HAService.spotifyEntity, orElse: () => <String, dynamic>{});
-      final sp = (spEnt['attributes'] as Map<String, dynamic>?) ?? {};
-      final spState = spEnt['state'] as String? ?? 'idle';
-      final spOn = spState == 'playing' || spState == 'paused';
-
-      final devs = <_Dev>[];
-      for (final echo in _ECHOS) {
-        final s = all.firstWhere((e) => e['entity_id'] == echo.$1, orElse: () => <String, dynamic>{});
-        if (s.isEmpty || s['state'] == 'unavailable') {
-          devs.add(_Dev(entity: echo.$1, name: echo.$2, state: 'unavailable'));
-          continue;
-        }
-        final a = (s['attributes'] as Map<String, dynamic>?) ?? {};
-        // PWA logic: use Spotify data if Spotify is on AND source matches this Echo
-        final src = spOn && sp['source'] == _SPOTIFY_SOURCES[echo.$1];
-        devs.add(_Dev(
-          entity: echo.$1, name: echo.$2, state: s['state'] as String? ?? 'idle',
-          title: (src ? sp['media_title'] : a['media_title'])?.toString(),
-          artist: (src ? sp['media_artist'] : a['media_artist'])?.toString(),
-          album: (src ? sp['media_album_name'] : a['media_album_name'])?.toString(),
-          art: (src ? sp['entity_picture'] : a['entity_picture'])?.toString(),
-          vol: a['volume_level'] is num ? (a['volume_level'] as num) * 100 ~/ 1 : null, // Always Echo vol
-          muted: a['is_volume_muted'] as bool?,
-          duration: src ? sp['media_duration'] as num? : a['media_duration'] as num?,
-          position: src ? sp['media_position'] as num? : a['media_position'] as num?,
-          positionUpdated: (src ? sp['media_position_updated_at'] : a['media_position_updated_at'])?.toString(),
-          shuffle: (src ? sp['shuffle'] : a['shuffle']) as bool?,
-        ));
+      for (final e in all) {
+        final id = e['entity_id'] as String;
+        _rawStates[id] = e['state'] as String? ?? 'unavailable';
+        _rawAttrs[id] = (e['attributes'] as Map<String, dynamic>?) ?? {};
       }
-
-      if (!mounted) return;
-      setState(() {
-        _devs = devs;
-        // Clear optimistic states that match reality
-        final upd = Map<String, bool?>.from(_optPlay);
-        for (final entry in _optPlay.entries) {
-          if (entry.value == null) continue;
-          final real = devs.firstWhere((d) => d.entity == entry.key, orElse: () => _Dev(entity: '', name: '', state: 'idle'));
-          if ((real.state == 'playing') == entry.value) upd.remove(entry.key);
-        }
-        _optPlay = upd;
-        // Clear localVol if HA matches (within 2%)
-        if (_localVol != null && _active != null && _active!.vol != null) {
-          if ((_localVol! - _active!.vol!).abs() <= 2) _localVol = null;
-        }
-        // Set selection if not set
-        if (_sel == null || !devs.any((d) => d.entity == _sel)) {
-          _sel = devs.firstWhere((d) => d.state == 'playing', orElse: () => devs.first).entity;
-        }
-      });
-      _syncPosition();
+      _rebuildDevs();
     } catch (_) {}
+  }
+
+  /// Rebuild the _devs list from raw state — mirrors PWA poll() logic exactly
+  void _rebuildDevs() {
+    final spState = _rawStates[HAService.spotifyEntity] ?? 'idle';
+    final sp = _rawAttrs[HAService.spotifyEntity] ?? {};
+    final spOn = spState == 'playing' || spState == 'paused';
+
+    final devs = <_Dev>[];
+    for (final echo in _ECHOS) {
+      final state = _rawStates[echo.$1] ?? 'unavailable';
+      if (state == 'unavailable') {
+        devs.add(_Dev(entity: echo.$1, name: echo.$2, state: 'unavailable'));
+        continue;
+      }
+      final a = _rawAttrs[echo.$1] ?? {};
+      final src = spOn && sp['source'] == _SPOTIFY_SOURCES[echo.$1];
+      devs.add(_Dev(
+        entity: echo.$1, name: echo.$2, state: state,
+        title: (src ? sp['media_title'] : a['media_title'])?.toString(),
+        artist: (src ? sp['media_artist'] : a['media_artist'])?.toString(),
+        album: (src ? sp['media_album_name'] : a['media_album_name'])?.toString(),
+        art: (src ? sp['entity_picture'] : a['entity_picture'])?.toString(),
+        vol: a['volume_level'] is num ? ((a['volume_level'] as num) * 100).round() : null,
+        muted: a['is_volume_muted'] as bool?,
+        duration: src ? sp['media_duration'] as num? : a['media_duration'] as num?,
+        position: src ? sp['media_position'] as num? : a['media_position'] as num?,
+        positionUpdated: (src ? sp['media_position_updated_at'] : a['media_position_updated_at'])?.toString(),
+        shuffle: (src ? sp['shuffle'] : a['shuffle']) as bool?,
+      ));
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _devs = devs;
+      // Clear optimistic states that match reality
+      final upd = Map<String, bool?>.from(_optPlay);
+      for (final entry in _optPlay.entries) {
+        if (entry.value == null) continue;
+        final real = devs.firstWhere((d) => d.entity == entry.key, orElse: () => _Dev(entity: '', name: '', state: 'idle'));
+        if ((real.state == 'playing') == entry.value) upd.remove(entry.key);
+      }
+      _optPlay = upd;
+      // Clear localVol if HA matches (within 2%)
+      if (_localVol != null && _active != null && _active!.vol != null) {
+        if ((_localVol! - _active!.vol!).abs() <= 2) _localVol = null;
+      }
+      // Set selection if not set
+      if (_sel == null || !devs.any((d) => d.entity == _sel)) {
+        _sel = devs.firstWhere((d) => d.state == 'playing', orElse: () => devs.first).entity;
+      }
+    });
+    _syncPosition();
   }
 
   void _syncPosition() {
