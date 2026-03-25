@@ -12,11 +12,8 @@ class SpotifyAuth {
   static const _clientSecret = 'bc9a9b510e5a484b82285033297584f7';
   static const _scopes = 'user-modify-playback-state user-read-playback-state user-read-currently-playing';
 
-  // Redirect URI — must be registered in Spotify Dashboard
-  static String get _redirectUri {
-    final origin = html.window.location.origin;
-    return '$origin/spotify-callback.html';
-  }
+  // Fixed HTTPS redirect URI — always works regardless of Flutter port
+  static const _redirectUri = 'https://smithmk-demo.vercel.app/spotify-callback.html';
 
   static String? _accessToken;
   static DateTime? _expiresAt;
