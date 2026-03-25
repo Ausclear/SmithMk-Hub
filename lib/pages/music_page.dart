@@ -78,7 +78,13 @@ class _MusicPageState extends State<MusicPage> {
   bool _getEffPlaying(String entity) {
     final opt = _optPlay[entity];
     if (opt != null) return opt;
-    return _devs.any((d) => d.entity == entity && d.state == 'playing');
+    // Check Echo entity state
+    if (_devs.any((d) => d.entity == entity && d.state == 'playing')) return true;
+    // Also check if Spotify is playing on this Echo (Echo state may lag behind)
+    final spState = _rawStates[HAService.spotifyEntity] ?? 'idle';
+    final sp = _rawAttrs[HAService.spotifyEntity] ?? {};
+    if (spState == 'playing' && sp['source'] == _SPOTIFY_SOURCES[entity]) return true;
+    return false;
   }
 
   // Raw state from HA — updated by WebSocket in place
