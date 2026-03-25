@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head><title>Spotify Login</title></head>
+<body>
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const error = params.get('error');
+  if (code) {
+    window.opener.postMessage('spotify_code:' + code, '*');
+  } else {
+    window.opener.postMessage('spotify_error', '*');
+  }
+  window.close();
+</script>
+<p>Logging in to Spotify... this window should close automatically.</p>
+</body>
+</html>
