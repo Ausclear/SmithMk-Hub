@@ -63,9 +63,45 @@ class _LightingPageState extends State<LightingPage> {
     LightScene(id: 's6', name: 'All Off', emoji: '⚫', brightness: 0, builtin: true),
   ];
   String? _activeScene;
+  StreamSubscription<HueEvent>? _sseSub;
+  Map<String, String> _v2ToV1 = {};
 
   @override
-  void initState() { super.initState(); _loadLights(); }
+  void initState() { super.initState(); _loadLights(); _startSSE(); }
+
+  @override
+  void dispose() { _sseSub?.cancel(); HueService.stopEventStream(); super.dispose(); }
+
+  void _startSSE() async {
+    // Build V2→V1 ID mapping
+    _v2ToV1 = await HueService.getV2ToV1Map();
+    
+    _sseSub = HueService.startEventStream().listen((event) {
+      if (!mounted) return;
+      
+      if (event.type == HueEventType.deviceAdded || event.type == HueEventType.lightAdded) {
+        // New device/light — full reload to pick it up
+        _loadLights();
+        return;
+      }
+      
+      if (event.type == HueEventType.lightChanged) {
+        // Find the V1 ID from the V2 resource ID
+        final v1Id = _v2ToV1[event.resourceId];
+        if (v1Id == null) return;
+        
+        final hueId = 'hue:$v1Id';
+        final light = _lights.cast<LightDevice?>().firstWhere((l) => l?.id == hueId, orElse: () => null);
+        if (light == null) return;
+        
+        setState(() {
+          if (event.on != null) light.on = event.on!;
+          if (event.brightness != null) light.brightness = event.brightness!;
+          if (!light.on) light.brightness = 0;
+        });
+      }
+    });
+  }
 
   Future<void> _loadLights() async {
     setState(() { _loading = true; _error = null; });
