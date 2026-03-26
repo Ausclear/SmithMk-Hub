@@ -147,6 +147,7 @@ class _LightingPageState extends State<LightingPage> {
       final hueLights = await HueService.getLights();
       final lights = <LightDevice>[];
       hueLights.forEach((id, hl) {
+        if (!hl.reachable) return; // Skip unreachable lights
         lights.add(LightDevice(id: 'hue:$id', name: hl.name, source: 'hue', on: hl.on, brightness: hl.brightness));
       });
       // Load Tapo devices from proxy
