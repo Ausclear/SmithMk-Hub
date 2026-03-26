@@ -1,510 +1,474 @@
-import 'dart:math';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
-import '../theme/smithmk_theme.dart';
-import '../widgets/status_bar.dart';
-import '../widgets/glass_card.dart';
+import '../services/hue_service.dart';
+
+// Crestron-inspired colour system (approved demo)
+class _C {
+  static const bg = Color(0xFF0E0D0B);
+  static const card = Color(0xFF1A1916);
+  static const amber = Color(0xFFE8A61C);
+  static const gold = Color(0xFFC4A96B);
+  static const t1 = Color(0xFFF0EDE6);
+  static const t2 = Color(0xFF8A8778);
+  static const t3 = Color(0xFF5A5848);
+  static const border = Color(0x0DFFFFFF);
+  static const borderOn = Color(0x1FE8A61C);
+  static const track = Color(0x0FFFFFFF);
+  static const togOff = Color(0xFF2A2924);
+  static const togKnob = Color(0xFF5A5848);
+}
+
+class LightDevice {
+  final String id, name, source;
+  bool on;
+  int brightness;
+  String? tapoIp;
+  LightDevice({required this.id, required this.name, required this.source, this.on = false, this.brightness = 0, this.tapoIp});
+  bool get isPlug => source == 'tapo_plug';
+  bool get isDimmable => source != 'tapo_plug';
+}
+
+class LightScene {
+  String id, name, emoji;
+  int brightness;
+  bool builtin;
+  LightScene({required this.id, required this.name, required this.emoji, required this.brightness, this.builtin = false});
+}
+
+class LightGroup {
+  String id, name;
+  List<String> lightIds;
+  LightGroup({required this.id, required this.name, required this.lightIds});
+}
 
 class LightingPage extends StatefulWidget {
   const LightingPage({super.key});
-
   @override
   State<LightingPage> createState() => _LightingPageState();
 }
 
 class _LightingPageState extends State<LightingPage> {
-  final List<_LightData> _lights = [
-    _LightData('Bedroom Downlights', 0.75, true),
-    _LightData('Reading Light', 0.0, false),
-    _LightData('Bedside Lamp', 0.40, true),
-    _LightData('Kitchen Spots', 0.60, true),
+  bool _loading = true;
+  String? _error;
+  List<LightDevice> _lights = [];
+  final List<LightGroup> _groups = [];
+  final List<LightScene> _scenes = [
+    LightScene(id: 's1', name: 'Bright', emoji: '☀️', brightness: 100, builtin: true),
+    LightScene(id: 's2', name: 'Relax', emoji: '🌅', brightness: 60),
+    LightScene(id: 's3', name: 'Dim', emoji: '🌙', brightness: 25),
+    LightScene(id: 's4', name: 'Evening', emoji: '🌆', brightness: 45),
+    LightScene(id: 's5', name: 'Focus', emoji: '💼', brightness: 80),
+    LightScene(id: 's6', name: 'All Off', emoji: '⚫', brightness: 0, builtin: true),
   ];
+  String? _activeScene;
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: SmithMkColors.background,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('LIGHTING', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: SmithMkColors.textTertiary, letterSpacing: 1.5)),
-                  const SizedBox(height: 4),
-                  const Text('Bedroom', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: SmithMkColors.textPrimary)),
-                  const SizedBox(height: 10),
-                  const StatusBar(),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                physics: const BouncingScrollPhysics(),
-                itemCount: _lights.length,
-                itemBuilder: (ctx, i) => _buildLightCard(i),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  void initState() { super.initState(); _loadLights(); }
 
-  Widget _buildLightCard(int index) {
-    final light = _lights[index];
-    final col = light.on ? SmithMkColors.accent : SmithMkColors.inactive;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: SmithMkColors.cardSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SmithMkColors.glassBorder),
-      ),
-      child: Column(
-        children: [
-          // Header: icon + name + percentage
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  // Light icon with glow
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    width: 40, height: 40,
-                    decoration: BoxDecoration(
-                      color: light.on
-                          ? SmithMkColors.accent.withValues(alpha: 0.12)
-                          : Colors.white.withValues(alpha: 0.03),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: light.on
-                          ? [BoxShadow(color: SmithMkColors.accent.withValues(alpha: 0.1), blurRadius: 12)]
-                          : null,
-                    ),
-                    child: Icon(
-                      PhosphorIcons.lightbulb(light.on ? PhosphorIconsStyle.fill : PhosphorIconsStyle.light),
-                      color: col, size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(light.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: SmithMkColors.textPrimary)),
-                ],
-              ),
-              Text(
-                light.on ? '${(light.brightness * 100).round()}%' : 'Off',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: col),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          // Body: vertical slider + controls
-          SizedBox(
-            height: 180,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Vertical slider
-                _VerticalDimmerSlider(
-                  value: light.brightness,
-                  isOn: light.on,
-                  onChanged: (v) {
-                    setState(() {
-                      light.brightness = v;
-                      light.on = v > 0;
-                    });
-                  },
-                ),
-                const SizedBox(width: 18),
-                // Controls column
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Toggle switch
-                      Row(
-                        children: [
-                          const Text('Power', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: SmithMkColors.textTertiary, letterSpacing: 0.5)),
-                          const SizedBox(width: 12),
-                          _ToggleSwitch(
-                            value: light.on,
-                            onChanged: (v) {
-                              HapticFeedback.lightImpact();
-                              setState(() {
-                                light.on = v;
-                                if (v && light.brightness == 0) light.brightness = 0.75;
-                                if (!v) light.brightness = 0;
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-                      // +/- buttons
-                      Row(
-                        children: [
-                          Expanded(child: _PremiumButton(label: '−', onTap: () {
-                            HapticFeedback.selectionClick();
-                            setState(() {
-                              light.brightness = (light.brightness - 0.05).clamp(0.0, 1.0);
-                              light.on = light.brightness > 0;
-                            });
-                          })),
-                          const SizedBox(width: 8),
-                          Expanded(child: _PremiumButton(label: '+', onTap: () {
-                            HapticFeedback.selectionClick();
-                            setState(() {
-                              light.brightness = (light.brightness + 0.05).clamp(0.0, 1.0);
-                              light.on = light.brightness > 0;
-                            });
-                          })),
-                        ],
-                      ),
-                      // Preset buttons
-                      Row(
-                        children: [
-                          for (final pct in [25, 50, 75, 100]) ...[
-                            if (pct > 25) const SizedBox(width: 6),
-                            Expanded(child: _PremiumButton(
-                              label: '$pct%',
-                              small: true,
-                              onTap: () {
-                                HapticFeedback.mediumImpact();
-                                setState(() {
-                                  light.brightness = pct / 100;
-                                  light.on = true;
-                                });
-                              },
-                            )),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── VERTICAL DIMMER SLIDER ───
-class _VerticalDimmerSlider extends StatefulWidget {
-  final double value;
-  final bool isOn;
-  final ValueChanged<double> onChanged;
-
-  const _VerticalDimmerSlider({
-    required this.value,
-    required this.isOn,
-    required this.onChanged,
-  });
-
-  @override
-  State<_VerticalDimmerSlider> createState() => _VerticalDimmerSliderState();
-}
-
-class _VerticalDimmerSliderState extends State<_VerticalDimmerSlider> {
-  int _lastDetent = -1;
-
-  void _handleDrag(Offset localPosition, double height) {
-    final frac = 1 - (localPosition.dy / height);
-    final clamped = frac.clamp(0.0, 1.0);
-    final rounded = (clamped * 100).round() / 100;
-
-    // Haptic detent points
-    final detent = (rounded * 4).round(); // 0, 25, 50, 75, 100
-    if (detent != _lastDetent) {
-      if (rounded == 0 || rounded == 1) {
-        HapticFeedback.mediumImpact();
-      } else {
-        HapticFeedback.selectionClick();
-      }
-      _lastDetent = detent;
+  Future<void> _loadLights() async {
+    setState(() { _loading = true; _error = null; });
+    try {
+      final hueLights = await HueService.getLights();
+      final lights = <LightDevice>[];
+      hueLights.forEach((id, hl) {
+        lights.add(LightDevice(id: 'hue:$id', name: hl.name, source: 'hue', on: hl.on, brightness: hl.brightness));
+      });
+      lights.addAll([
+        LightDevice(id: 'tapo:ucl1', name: 'Kitchen UCL 1', source: 'tapo_plug', on: false),
+        LightDevice(id: 'tapo:ucl2', name: 'Kitchen UCL 2', source: 'tapo_plug', on: false),
+        LightDevice(id: 'tapo:picture', name: 'Lounge Picture', source: 'tapo_plug', on: false),
+        LightDevice(id: 'tapo:strip1', name: 'Cerise Lightstrip', source: 'tapo_strip', on: false),
+        LightDevice(id: 'tapo:strip2', name: 'Cerise Lightstrip 2', source: 'tapo_strip', on: false),
+      ]);
+      setState(() { _lights = lights; _loading = false; });
+    } catch (e) {
+      setState(() {
+        _lights = [
+          LightDevice(id:'h12',name:'Entrance 1',source:'hue'),LightDevice(id:'h21',name:'Entrance 2',source:'hue'),
+          LightDevice(id:'h1',name:'Entrance 3',source:'hue'),LightDevice(id:'h16',name:'Entrance 4',source:'hue'),
+          LightDevice(id:'h15',name:'Laundry 1',source:'hue'),LightDevice(id:'h13',name:'Laundry 2',source:'hue'),
+          LightDevice(id:'h14',name:'Laundry 3',source:'hue'),LightDevice(id:'h17',name:'Lounge Light',source:'hue'),
+          LightDevice(id:'h7',name:'Alfresco',source:'hue'),LightDevice(id:'h8',name:'MBLight 1',source:'hue'),
+          LightDevice(id:'h20',name:'MBLight 2',source:'hue'),
+          LightDevice(id:'t1',name:'Kitchen UCL 1',source:'tapo_plug',on:true),
+          LightDevice(id:'t2',name:'Kitchen UCL 2',source:'tapo_plug',on:true),
+          LightDevice(id:'tp',name:'Lounge Picture',source:'tapo_plug',on:true),
+          LightDevice(id:'ts1',name:'Cerise Lightstrip',source:'tapo_strip'),
+          LightDevice(id:'ts2',name:'Cerise Lightstrip 2',source:'tapo_strip'),
+        ];
+        _loading = false; _error = 'Demo mode — Hue bridge unreachable';
+      });
     }
+  }
 
-    widget.onChanged(rounded);
+  Future<void> _toggleLight(LightDevice l) async {
+    HapticFeedback.lightImpact();
+    setState(() {
+      if (l.isPlug) { l.on = !l.on; }
+      else { if (l.on) { l.on = false; l.brightness = 0; } else { l.on = true; l.brightness = 75; } }
+    });
+    if (l.source == 'hue') {
+      final hid = l.id.replaceFirst('hue:', '');
+      try { l.on ? await HueService.setBrightness(hid, l.brightness) : await HueService.turnOff(hid); } catch (_) {}
+    }
+  }
+
+  Future<void> _setBri(LightDevice l, int pct) async {
+    setState(() { l.brightness = pct; l.on = pct > 0; });
+    if (l.source == 'hue') {
+      final hid = l.id.replaceFirst('hue:', '');
+      try { pct > 0 ? await HueService.setBrightness(hid, pct) : await HueService.turnOff(hid); } catch (_) {}
+    }
+  }
+
+  void _activateScene(LightScene s) {
+    HapticFeedback.mediumImpact();
+    setState(() {
+      _activeScene = s.id;
+      for (final l in _lights) {
+        if (l.isPlug) { l.on = s.brightness > 0; }
+        else { l.brightness = s.brightness; l.on = s.brightness > 0; }
+      }
+    });
+    for (final l in _lights.where((x) => x.source == 'hue')) {
+      final hid = l.id.replaceFirst('hue:', '');
+      l.on ? HueService.setBrightness(hid, l.brightness).catchError((_){}) : HueService.turnOff(hid).catchError((_){});
+    }
+  }
+
+  void _adjustAll(int delta) {
+    HapticFeedback.selectionClick();
+    setState(() { for (final l in _lights) { if (!l.isPlug && l.on) { l.brightness = (l.brightness + delta).clamp(0, 100); if (l.brightness == 0) l.on = false; } } });
   }
 
   @override
   Widget build(BuildContext context) {
-    final fillPct = widget.isOn ? widget.value : 0.0;
-    final alpha = 0.3 + fillPct * 0.55;
+    final onC = _lights.where((l) => l.on).length;
+    final w = MediaQuery.of(context).size.width;
+    final cols = w >= 960 ? 3 : w >= 580 ? 2 : 1;
 
-    return GestureDetector(
-      onVerticalDragStart: (d) => _handleDrag(d.localPosition, 180),
-      onVerticalDragUpdate: (d) => _handleDrag(d.localPosition, 180),
-      child: SizedBox(
-        width: 52,
-        height: 180,
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.bottomCenter,
-          children: [
-            // Track — recessed, SHARP edges no blur
-            Container(
-              width: 36,
-              height: 180,
-              decoration: BoxDecoration(
-                color: const Color(0xFF161616),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-              ),
-            ),
-            // Fill — starts dim amber, gets brighter as it rises
-            Positioned(
-              bottom: 0,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 60),
-                width: 36,
-                height: (180 * fillPct).clamp(0.0, 180.0),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: [
-                      SmithMkColors.accent.withValues(alpha: 0.15 + fillPct * 0.15),
-                      SmithMkColors.accent.withValues(alpha: 0.3 + fillPct * 0.55),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            // Thumb — clamped so it never disappears
-            Positioned(
-              bottom: (158 * fillPct).clamp(0.0, 158.0),
-              child: Container(
-                width: 44, height: 22,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(11),
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: widget.isOn
-                        ? [const Color(0xFF4A3800), const Color(0xFF332600)]
-                        : [const Color(0xFF3A3A3A), const Color(0xFF222222)],
-                  ),
-                  border: Border.all(
-                    color: widget.isOn
-                        ? SmithMkColors.accent.withValues(alpha: 0.3)
-                        : Colors.white.withValues(alpha: 0.1),
-                  ),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 1, offset: const Offset(0, 2)),
+    return Scaffold(
+      backgroundColor: _C.bg,
+      body: SafeArea(
+        child: _loading ? const Center(child: CircularProgressIndicator(color: _C.amber))
+            : RefreshIndicator(
+                onRefresh: _loadLights,
+                color: _C.amber,
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
+                  children: [
+                    // Header
+                    Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('$onC of ${_lights.length} on', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _C.t3, letterSpacing: 1.5)),
+                      const SizedBox(height: 4),
+                      const Text('Lights', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: _C.t1, letterSpacing: -0.5)),
+                      if (_error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_error!, style: const TextStyle(fontSize: 11, color: Color(0xFFFF6B6B)))),
+                    ])),
+                    const SizedBox(height: 20),
+
+                    // Scenes
+                    const Padding(padding: EdgeInsets.symmetric(horizontal: 4), child: Text('Scenes', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _C.t3, letterSpacing: 2))),
+                    const SizedBox(height: 10),
+                    SizedBox(height: 40, child: ListView.separated(
+                      scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 4),
+                      itemCount: _scenes.length + 1, separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (ctx, i) {
+                        if (i == _scenes.length) return _sceneChip('+ Scene', null, false, onTap: () => _showSceneDialog(null));
+                        final s = _scenes[i];
+                        return _sceneChip('${s.emoji} ${s.name}', s, _activeScene == s.id, onTap: () => _activateScene(s), onLongPress: () => _showSceneDialog(s));
+                      },
+                    )),
+                    const SizedBox(height: 24),
+
+                    // All Lights header
+                    Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: Row(children: [
+                      _circBtn('−', () => _adjustAll(-10)),
+                      const SizedBox(width: 12),
+                      const Expanded(child: Text('All Lights', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _C.t1))),
+                      _circBtn('+', () => _adjustAll(10)),
+                      const SizedBox(width: 12),
+                      GestureDetector(onTap: () => _showGroupDialog(null), child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                        decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: _C.borderOn), color: const Color(0x0AE8A61C)),
+                        child: const Text('+ Group', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _C.amber)),
+                      )),
+                    ])),
+                    const SizedBox(height: 16),
+
+                    // Lights grid
+                    ..._buildGrid(cols),
+
+                    // Add group
+                    const SizedBox(height: 12),
+                    GestureDetector(onTap: () => _showGroupDialog(null), child: Container(
+                      padding: const EdgeInsets.all(18), decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0x14C4A96B))),
+                      child: const Center(child: Text('+ Add Group', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: _C.t3))),
+                    )),
                   ],
                 ),
-                child: Center(
-                  child: Container(
-                    width: 18, height: 2,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(1),
-                      color: widget.isOn
-                          ? SmithMkColors.accent.withValues(alpha: 0.4)
-                          : Colors.white.withValues(alpha: 0.15),
-                    ),
-                  ),
-                ),
               ),
-            ),
-          ],
-        ),
       ),
     );
   }
-}
 
-// ─── 3D TOGGLE SWITCH ───
-class _ToggleSwitch extends StatefulWidget {
-  final bool value;
-  final ValueChanged<bool> onChanged;
+  List<Widget> _buildGrid(int cols) {
+    final grouped = <String>{};
+    final sections = <Widget>[];
 
-  const _ToggleSwitch({required this.value, required this.onChanged});
+    for (final g in _groups) {
+      final gl = g.lightIds.map((id) => _lights.cast<LightDevice?>().firstWhere((l) => l?.id == id, orElse: () => null)).whereType<LightDevice>().toList();
+      for (final l in gl) grouped.add(l.id);
+      final anyOn = gl.any((l) => l.on);
 
-  @override
-  State<_ToggleSwitch> createState() => _ToggleSwitchState();
-}
+      sections.add(Padding(padding: const EdgeInsets.only(top: 16, bottom: 8), child: Row(children: [
+        Text(g.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _C.t2)),
+        const Spacer(),
+        GestureDetector(onTap: () => _showGroupDialog(g), child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(6), border: Border.all(color: _C.border)),
+          child: const Text('Edit', style: TextStyle(fontSize: 10, color: _C.t3)),
+        )),
+        const SizedBox(width: 6),
+        _AmberToggle(value: anyOn, onChanged: (_) {
+          HapticFeedback.lightImpact();
+          setState(() { for (final l in gl) { if (anyOn) { l.on = false; if (!l.isPlug) l.brightness = 0; } else { l.on = true; if (!l.isPlug) l.brightness = 75; } } });
+        }),
+      ])));
 
-class _ToggleSwitchState extends State<_ToggleSwitch> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _position;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 350),
-      vsync: this,
-    );
-    _position = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
-    );
-    if (widget.value) _controller.value = 1;
-  }
-
-  @override
-  void didUpdateWidget(_ToggleSwitch old) {
-    super.didUpdateWidget(old);
-    if (widget.value != old.value) {
-      if (widget.value) {
-        _controller.forward();
-      } else {
-        _controller.reverse();
-      }
+      sections.add(_wrapGrid(cols, gl.map((l) => _lightCard(l)).toList()));
     }
+
+    final ug = _lights.where((l) => !grouped.contains(l.id)).toList();
+    if (ug.isNotEmpty && _groups.isNotEmpty) {
+      sections.add(Padding(padding: const EdgeInsets.only(top: 16, bottom: 8),
+          child: Text('Ungrouped', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _C.t3.withOpacity(0.4)))));
+    }
+    sections.add(_wrapGrid(cols, ug.map((l) => _lightCard(l)).toList()));
+
+    return sections;
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  Widget _wrapGrid(int cols, List<Widget> cards) {
+    if (cols == 1) return Column(children: cards.map((c) => Padding(padding: const EdgeInsets.only(bottom: 8), child: c)).toList());
+    final rows = <Widget>[];
+    for (var i = 0; i < cards.length; i += cols) {
+      final row = <Widget>[];
+      for (var j = 0; j < cols; j++) {
+        if (i + j < cards.length) { row.add(Expanded(child: cards[i + j])); }
+        else { row.add(const Expanded(child: SizedBox())); }
+        if (j < cols - 1) row.add(const SizedBox(width: 8));
+      }
+      rows.add(Padding(padding: const EdgeInsets.only(bottom: 8), child: Row(children: row)));
+    }
+    return Column(children: rows);
   }
+
+  Widget _lightCard(LightDevice l) {
+    final on = l.on;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _C.card, borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: on ? _C.borderOn : _C.border),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 2)),
+          if (on) BoxShadow(color: _C.amber.withOpacity(0.04), blurRadius: 20)],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+        Row(children: [
+          Icon(l.isPlug ? PhosphorIcons.plug(PhosphorIconsStyle.fill) : PhosphorIcons.lightbulb(on ? PhosphorIconsStyle.fill : PhosphorIconsStyle.light),
+              size: 18, color: on ? _C.amber : _C.t3),
+          const SizedBox(width: 10),
+          Expanded(child: Text(l.name, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: on ? _C.t1 : _C.t3))),
+          Text(l.isPlug ? (on ? 'ON' : 'OFF') : (on ? '${l.brightness}%' : 'Off'),
+              style: TextStyle(fontSize: l.isPlug ? 11 : 13, fontWeight: FontWeight.w700, color: on ? _C.amber : _C.t3)),
+          const SizedBox(width: 10),
+          _AmberToggle(value: on, onChanged: (_) => _toggleLight(l)),
+        ]),
+        if (l.isDimmable) ...[
+          const SizedBox(height: 14),
+          _BrightnessBar(value: l.brightness / 100, isOn: on, onChanged: (v) => _setBri(l, (v * 100).round())),
+        ],
+      ]),
+    );
+  }
+
+  Widget _sceneChip(String label, LightScene? s, bool active, {required VoidCallback onTap, VoidCallback? onLongPress}) {
+    return GestureDetector(onTap: onTap, onLongPress: onLongPress, child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: active ? const Color(0x1FE8A61C) : _C.card, borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: active ? _C.borderOn : _C.border),
+        boxShadow: active ? [BoxShadow(color: _C.amber.withOpacity(0.1), blurRadius: 12)] : null,
+      ),
+      child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: active ? _C.amber : s == null ? _C.gold : _C.t2)),
+    ));
+  }
+
+  Widget _circBtn(String label, VoidCallback onTap) {
+    return GestureDetector(onTap: onTap, child: Container(
+      width: 34, height: 34,
+      decoration: BoxDecoration(shape: BoxShape.circle, color: _C.card, border: Border.all(color: _C.border),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 6, offset: const Offset(0, 2))]),
+      child: Center(child: Text(label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: _C.t2))),
+    ));
+  }
+
+  // ─── Group dialog ───
+  void _showGroupDialog(LightGroup? existing) {
+    final nc = TextEditingController(text: existing?.name ?? '');
+    final sel = Set<String>.from(existing?.lightIds ?? []);
+    showDialog(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, ss) => Dialog(
+      backgroundColor: const Color(0xFF141310), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ConstrainedBox(constraints: BoxConstraints(maxWidth: MediaQuery.of(ctx).size.width >= 900 ? 720 : MediaQuery.of(ctx).size.width >= 600 ? 560 : 380, maxHeight: MediaQuery.of(ctx).size.height * 0.8),
+        child: Padding(padding: const EdgeInsets.all(22), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(existing != null ? 'Edit Group' : 'New Group', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _C.t1)),
+          const SizedBox(height: 14),
+          TextField(controller: nc, style: const TextStyle(fontSize: 13, color: Colors.white),
+            decoration: InputDecoration(hintText: 'Group name', hintStyle: const TextStyle(color: _C.t3), filled: true, fillColor: _C.bg,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: _C.border)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: _C.border)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11))),
+          const SizedBox(height: 12),
+          const Text('Select Lights', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: _C.t2)),
+          const SizedBox(height: 8),
+          Flexible(child: LayoutBuilder(builder: (ctx, c) {
+            final dc = c.maxWidth >= 500 ? 3 : c.maxWidth >= 300 ? 2 : 1;
+            return GridView.builder(shrinkWrap: true,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: dc, mainAxisSpacing: 4, crossAxisSpacing: 4, mainAxisExtent: 42),
+              itemCount: _lights.length, itemBuilder: (ctx, i) {
+                final l = _lights[i]; final s2 = sel.contains(l.id);
+                return GestureDetector(onTap: () => ss(() => s2 ? sel.remove(l.id) : sel.add(l.id)),
+                  child: Container(padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), color: s2 ? const Color(0x0AE8A61C) : Colors.transparent, border: Border.all(color: s2 ? _C.borderOn : Colors.transparent)),
+                    child: Row(children: [
+                      Container(width: 18, height: 18, decoration: BoxDecoration(borderRadius: BorderRadius.circular(5), color: s2 ? _C.amber : const Color(0x0AFFFFFF)),
+                        child: s2 ? const Icon(Icons.check, size: 12, color: Colors.black) : null),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(l.name, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: s2 ? _C.t1 : _C.t3))),
+                      Text(l.isPlug ? 'Plug' : 'Light', style: const TextStyle(fontSize: 10, color: Color(0x11FFFFFF))),
+                    ])));
+              });
+          })),
+          const SizedBox(height: 14),
+          Row(children: [
+            if (existing != null) Expanded(child: TextButton(onPressed: () { setState(() => _groups.removeWhere((g) => g.id == existing.id)); Navigator.pop(ctx); },
+                child: const Text('Delete', style: TextStyle(color: Color(0xFFD04040))))),
+            Expanded(child: TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: _C.t3)))),
+            const SizedBox(width: 8),
+            Expanded(child: ElevatedButton(onPressed: () {
+              final n = nc.text.trim(); if (n.isEmpty || sel.isEmpty) return;
+              setState(() { if (existing != null) { existing.name = n; existing.lightIds = sel.toList(); }
+                else { _groups.add(LightGroup(id: 'g${DateTime.now().millisecondsSinceEpoch}', name: n, lightIds: sel.toList())); } });
+              Navigator.pop(ctx);
+            }, style: ElevatedButton.styleFrom(backgroundColor: _C.amber, foregroundColor: Colors.black, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                child: const Text('Save', style: TextStyle(fontWeight: FontWeight.w700)))),
+          ]),
+        ]))))));
+  }
+
+  // ─── Scene dialog ───
+  void _showSceneDialog(LightScene? existing) {
+    final nc = TextEditingController(text: existing?.name ?? '');
+    String em = existing?.emoji ?? '✨'; int bri = existing?.brightness ?? 70;
+    final ems = ['☀️','🌅','🌙','🌆','💼','⚫','✨','🔥','💤','🎬','🍽️','🎉'];
+    showDialog(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, ss) => Dialog(
+      backgroundColor: const Color(0xFF141310), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(padding: const EdgeInsets.all(22), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(existing != null ? 'Edit Scene' : 'New Scene', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _C.t1)),
+        const SizedBox(height: 14),
+        Wrap(spacing: 5, runSpacing: 5, children: ems.map((e) => GestureDetector(onTap: () => ss(() => em = e),
+          child: Container(width: 34, height: 34, decoration: BoxDecoration(borderRadius: BorderRadius.circular(8),
+              color: e == em ? const Color(0x14E8A61C) : const Color(0x08FFFFFF), border: Border.all(color: e == em ? _C.borderOn : _C.border)),
+            child: Center(child: Text(e, style: const TextStyle(fontSize: 16)))))).toList()),
+        const SizedBox(height: 12),
+        TextField(controller: nc, style: const TextStyle(fontSize: 13, color: Colors.white),
+          decoration: InputDecoration(hintText: 'Scene name', hintStyle: const TextStyle(color: _C.t3), filled: true, fillColor: _C.bg,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: _C.border)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: _C.border)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11))),
+        const SizedBox(height: 12),
+        Row(children: [
+          Expanded(child: _BrightnessBar(value: bri / 100, isOn: true, onChanged: (v) => ss(() => bri = (v * 100).round()))),
+          const SizedBox(width: 12),
+          Text('$bri%', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _C.amber)),
+        ]),
+        const SizedBox(height: 14),
+        Row(children: [
+          if (existing != null && !existing.builtin) Expanded(child: TextButton(onPressed: () { setState(() => _scenes.removeWhere((s) => s.id == existing.id)); Navigator.pop(ctx); },
+              child: const Text('Delete', style: TextStyle(color: Color(0xFFD04040))))),
+          Expanded(child: TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: _C.t3)))),
+          const SizedBox(width: 8),
+          Expanded(child: ElevatedButton(onPressed: () {
+            final n = nc.text.trim(); if (n.isEmpty) return;
+            setState(() { if (existing != null) { existing.name = n; existing.emoji = em; existing.brightness = bri; }
+              else { _scenes.add(LightScene(id: 's${DateTime.now().millisecondsSinceEpoch}', name: n, emoji: em, brightness: bri)); } });
+            Navigator.pop(ctx);
+          }, style: ElevatedButton.styleFrom(backgroundColor: _C.amber, foregroundColor: Colors.black, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+              child: const Text('Save', style: TextStyle(fontWeight: FontWeight.w700)))),
+        ]),
+      ])))));
+  }
+}
+
+// ─── AMBER TOGGLE ───
+class _AmberToggle extends StatelessWidget {
+  final bool value; final ValueChanged<bool> onChanged;
+  const _AmberToggle({required this.value, required this.onChanged});
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(onTap: () { HapticFeedback.lightImpact(); onChanged(!value); },
+      child: AnimatedContainer(duration: const Duration(milliseconds: 200), width: 44, height: 24,
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: value ? _C.amber : _C.togOff,
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 4, offset: const Offset(0, 2))]),
+        child: AnimatedAlign(duration: const Duration(milliseconds: 200), curve: Curves.easeInOutCubicEmphasized,
+          alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+          child: Container(margin: const EdgeInsets.all(3), width: 18, height: 18,
+            decoration: BoxDecoration(shape: BoxShape.circle,
+              gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                colors: value ? [Colors.white, const Color(0xFFE0E0E0)] : [_C.togKnob, const Color(0xFF4A4838)]),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 3, offset: const Offset(0, 1))])))));
+  }
+}
+
+// ─── BRIGHTNESS BAR — gradient fill + fader thumb ───
+class _BrightnessBar extends StatelessWidget {
+  final double value; final bool isOn; final ValueChanged<double> onChanged;
+  const _BrightnessBar({required this.value, required this.isOn, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => widget.onChanged(!widget.value),
-      child: AnimatedBuilder(
-        animation: _position,
-        builder: (ctx, _) {
-          final t = _position.value;
-          final trackColor = Color.lerp(
-            const Color(0xFF1A1A1A),
-            const Color(0xFF3D3000),
-            t,
-          )!;
-          final borderColor = Color.lerp(
-            Colors.white.withValues(alpha: 0.08),
-            SmithMkColors.accent.withValues(alpha: 0.35),
-            t,
-          )!;
-          final knobColor = Color.lerp(
-            const Color(0xFF3A3A3A),
-            SmithMkColors.accent,
-            t,
-          )!;
-          final knobLeft = 2 + t * 26;
-
-          return Container(
-            width: 56, height: 30,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(15),
-              color: trackColor,
-              border: Border.all(color: borderColor),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 4, offset: const Offset(0, 2)),
-                if (t > 0.5) BoxShadow(color: SmithMkColors.accent.withValues(alpha: 0.08), blurRadius: 10),
-              ],
-            ),
-            child: Stack(
-              children: [
-                Positioned(
-                  left: knobLeft, top: 2,
-                  child: Container(
-                    width: 26, height: 26,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: knobColor,
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 4, offset: const Offset(0, 2)),
-                        if (t > 0.5) BoxShadow(color: SmithMkColors.accent.withValues(alpha: 0.2), blurRadius: 8),
-                      ],
-                    ),
-                    child: Align(
-                      alignment: const Alignment(0, -0.4),
-                      child: Container(
-                        width: 10, height: 4,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(2),
-                          color: Colors.white.withValues(alpha: 0.1 + t * 0.15),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
+    return LayoutBuilder(builder: (ctx, constraints) {
+      final w = constraints.maxWidth;
+      return GestureDetector(
+        onPanStart: (d) => onChanged((d.localPosition.dx / w).clamp(0.0, 1.0)),
+        onPanUpdate: (d) => onChanged((d.localPosition.dx / w).clamp(0.0, 1.0)),
+        onTapDown: (d) => onChanged((d.localPosition.dx / w).clamp(0.0, 1.0)),
+        child: SizedBox(height: 30, child: Stack(clipBehavior: Clip.none, alignment: Alignment.centerLeft, children: [
+          // Track
+          Container(height: 12, decoration: BoxDecoration(borderRadius: BorderRadius.circular(6), color: _C.track,
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 4, offset: const Offset(0, 2))])),
+          // Fill
+          if (isOn && value > 0) Positioned(left: 0, top: 9, bottom: 9, width: w * value,
+            child: Container(decoration: BoxDecoration(borderRadius: BorderRadius.circular(6),
+              gradient: const LinearGradient(colors: [Color(0xFFA04800), Color(0xFFD4820A), Color(0xFFEDAC1A), Color(0xFFF5D070)]),
+              boxShadow: [BoxShadow(color: _C.amber.withOpacity(0.25), blurRadius: 8), BoxShadow(color: _C.amber.withOpacity(0.4), blurRadius: 2)]))),
+          // Fader thumb
+          Positioned(left: (w * value - 14).clamp(0, w - 28), top: 0,
+            child: Container(width: 28, height: 30,
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(5),
+                gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                  colors: isOn ? [Colors.white, const Color(0xFFE8E8E8), const Color(0xFFD0D0D0)]
+                      : [const Color(0xFF555555), const Color(0xFF444444), const Color(0xFF333333)]),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 6, offset: const Offset(0, 2)),
+                  BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 2, offset: const Offset(0, 1))]),
+              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(3, (_) =>
+                Padding(padding: const EdgeInsets.symmetric(vertical: 1.5),
+                  child: Container(width: 12, height: 1.5, decoration: BoxDecoration(borderRadius: BorderRadius.circular(1),
+                    color: isOn ? Colors.black.withOpacity(0.12) : Colors.white.withOpacity(0.1)))))))),
+        ])));
+    });
   }
-}
-
-// ─── 3D PREMIUM BUTTON ───
-class _PremiumButton extends StatefulWidget {
-  final String label;
-  final VoidCallback onTap;
-  final bool small;
-
-  const _PremiumButton({required this.label, required this.onTap, this.small = false});
-
-  @override
-  State<_PremiumButton> createState() => _PremiumButtonState();
-}
-
-class _PremiumButtonState extends State<_PremiumButton> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 80),
-        height: widget.small ? 34 : 40,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(widget.small ? 8 : 10),
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: _pressed
-                ? [const Color(0xFF1A1A1A), const Color(0xFF222222)]
-                : [const Color(0xFF2A2A2A), const Color(0xFF1A1A1A)],
-          ),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-          boxShadow: _pressed
-              ? [BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 2, offset: const Offset(0, 1))]
-              : [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 6, offset: const Offset(0, 3)),
-                  BoxShadow(color: Colors.white.withValues(alpha: 0.04), blurRadius: 0, offset: const Offset(0, -1)),
-                ],
-        ),
-        transform: Matrix4.translationValues(0, _pressed ? 2 : 0, 0),
-        child: Center(
-          child: Text(
-            widget.label,
-            style: TextStyle(
-              fontSize: widget.small ? 11 : 13,
-              fontWeight: FontWeight.w600,
-              color: SmithMkColors.textSecondary,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─── DATA MODEL ───
-class _LightData {
-  String name;
-  double brightness; // 0.0 to 1.0
-  bool on;
-  _LightData(this.name, this.brightness, this.on);
 }
