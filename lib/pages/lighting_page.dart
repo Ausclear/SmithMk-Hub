@@ -5,6 +5,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../services/hue_service.dart';
 import '../services/tapo_service.dart';
 import '../services/supabase_service.dart';
+import '../widgets/responsive_dialog.dart';
 import '../services/supabase_service.dart';
 
 // Crestron-inspired colour system (approved demo)
@@ -278,12 +279,10 @@ class _LightingPageState extends State<LightingPage> {
 
   void _showRenameDialog(LightDevice l) {
     final nc = TextEditingController(text: l.name);
-    showDialog(context: context, builder: (ctx) => Dialog(
-      backgroundColor: const Color(0xFF141310), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(padding: const EdgeInsets.all(22), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+    SmithMkDialog.show(context: context, child: Padding(padding: const EdgeInsets.all(22), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('Rename Light', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _C.t1)),
         const SizedBox(height: 4),
-        Text(l.id, style: const TextStyle(fontSize: 10, color: _C.t3)),
+        Text('Original: ${l.originalName}', style: const TextStyle(fontSize: 10, color: _C.t3)),
         const SizedBox(height: 14),
         TextField(controller: nc, autofocus: true, style: const TextStyle(fontSize: 13, color: Colors.white),
           decoration: InputDecoration(hintText: 'Custom name', hintStyle: const TextStyle(color: _C.t3), filled: true, fillColor: _C.bg,
@@ -294,20 +293,20 @@ class _LightingPageState extends State<LightingPage> {
         Row(children: [
           Expanded(child: TextButton(onPressed: () async {
             await SupabaseService.removeLightName(l.id);
-            if (mounted) { Navigator.pop(ctx); _loadLights(); }
+            if (mounted) { Navigator.pop(context); _loadLights(); }
           }, child: const Text('Reset', style: TextStyle(color: _C.t3)))),
           const SizedBox(width: 8),
-          Expanded(child: TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: _C.t3)))),
+          Expanded(child: TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: _C.t3)))),
           const SizedBox(width: 8),
           Expanded(child: ElevatedButton(onPressed: () async {
             final n = nc.text.trim(); if (n.isEmpty) return;
             await SupabaseService.setLightName(l.id, n);
             setState(() => l.name = n);
-            Navigator.pop(ctx);
+            Navigator.pop(context);
           }, style: ElevatedButton.styleFrom(backgroundColor: _C.amber, foregroundColor: Colors.black, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
               child: const Text('Save', style: TextStyle(fontWeight: FontWeight.w700)))),
         ]),
-      ]))));
+      ])));
   }
 
   @override
@@ -500,9 +499,13 @@ class _LightingPageState extends State<LightingPage> {
   void _showGroupDialog(LightGroup? existing) {
     final nc = TextEditingController(text: existing?.name ?? '');
     final sel = Set<String>.from(existing?.lightIds ?? []);
-    showDialog(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, ss) => Dialog(
+    showDialog(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, ss) {
+      final mq = MediaQuery.of(ctx);
+      final w = mq.size.width;
+      double maxW = w < 600 ? (w > mq.size.height ? 420 : w * 0.9).clamp(0, 380) : w < 960 ? 500.0 : 560.0;
+      return Dialog(
       backgroundColor: const Color(0xFF141310), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ConstrainedBox(constraints: BoxConstraints(maxWidth: MediaQuery.of(ctx).size.width >= 900 ? 720 : MediaQuery.of(ctx).size.width >= 600 ? 560 : 380, maxHeight: MediaQuery.of(ctx).size.height * 0.8),
+      child: ConstrainedBox(constraints: BoxConstraints(maxWidth: maxW, maxHeight: mq.size.height * 0.8),
         child: Padding(padding: const EdgeInsets.all(22), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(existing != null ? 'Edit Group' : 'New Group', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _C.t1)),
           const SizedBox(height: 14),
@@ -515,7 +518,7 @@ class _LightingPageState extends State<LightingPage> {
           const Text('Select Lights', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: _C.t2)),
           const SizedBox(height: 8),
           Flexible(child: LayoutBuilder(builder: (ctx, c) {
-            final dc = c.maxWidth >= 500 ? 3 : c.maxWidth >= 300 ? 2 : 1;
+            final dc = c.maxWidth >= 400 ? 2 : 1;
             return GridView.builder(shrinkWrap: true,
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: dc, mainAxisSpacing: 4, crossAxisSpacing: 4, mainAxisExtent: 42),
               itemCount: _lights.length, itemBuilder: (ctx, i) {
@@ -546,7 +549,8 @@ class _LightingPageState extends State<LightingPage> {
             }, style: ElevatedButton.styleFrom(backgroundColor: _C.amber, foregroundColor: Colors.black, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
                 child: const Text('Save', style: TextStyle(fontWeight: FontWeight.w700)))),
           ]),
-        ]))))));
+        ]))));
+    }));
   }
 
   // ─── Scene dialog ───
@@ -554,9 +558,14 @@ class _LightingPageState extends State<LightingPage> {
     final nc = TextEditingController(text: existing?.name ?? '');
     String em = existing?.emoji ?? '✨'; int bri = existing?.brightness ?? 70;
     final ems = ['☀️','🌅','🌙','🌆','💼','⚫','✨','🔥','💤','🎬','🍽️','🎉'];
-    showDialog(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, ss) => Dialog(
+    showDialog(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, ss) {
+      final mq = MediaQuery.of(ctx);
+      final w = mq.size.width;
+      double maxW = w < 600 ? (w > mq.size.height ? 420 : w * 0.9).clamp(0, 380) : w < 960 ? 460.0 : 500.0;
+      return Dialog(
       backgroundColor: const Color(0xFF141310), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(padding: const EdgeInsets.all(22), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+      child: ConstrainedBox(constraints: BoxConstraints(maxWidth: maxW),
+        child: Padding(padding: const EdgeInsets.all(22), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(existing != null ? 'Edit Scene' : 'New Scene', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _C.t1)),
         const SizedBox(height: 14),
         Wrap(spacing: 5, runSpacing: 5, children: ems.map((e) => GestureDetector(onTap: () => ss(() => em = e),
@@ -589,7 +598,8 @@ class _LightingPageState extends State<LightingPage> {
           }, style: ElevatedButton.styleFrom(backgroundColor: _C.amber, foregroundColor: Colors.black, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
               child: const Text('Save', style: TextStyle(fontWeight: FontWeight.w700)))),
         ]),
-      ])))));
+      ]))));
+    }));
   }
 }
 
